@@ -33,7 +33,7 @@
   * Поисковый движок для транслита
     * Написать
 * Статьи
- * Дима - Improving Neural Machine Translation through Phrase-based Forced Decoding
- * Паша - Incorporating Discrete Translation Lexicons into Neural Machine Translation
- * Федя - Two are Better than One: An Ensemble of Retrieval- and Generation-Based Dialog Systems
- * Степа - Generating Sentences by Editing Prototypes — text generation
+  * Дима - Improving Neural Machine Translation through Phrase-based Forced Decoding
+  * Паша - Incorporating Discrete Translation Lexicons into Neural Machine Translation
+  * Федя - Two are Better than One: An Ensemble of Retrieval- and Generation-Based Dialog Systems
+  * Степа - Generating Sentences by Editing Prototypes — text generation
