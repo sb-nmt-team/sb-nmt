@@ -33,6 +33,7 @@
   * Поисковый движок для транслита
     * Написать
 * Статьи
+  * [Главная статья](https://arxiv.org/pdf/1705.07267.pdf)
   * Дима - [Improving Neural Machine Translation through Phrase-based Forced Decoding](https://arxiv.org/pdf/1711.00309.pdf)
   * Паша - [Incorporating Discrete Translation Lexicons into Neural Machine Translation](https://arxiv.org/pdf/1606.02006.pdf)
   * Федя - [Two are Better than One: An Ensemble of Retrieval- and Generation-Based Dialog Systems](https://arxiv.org/pdf/1610.07149.pdf)
