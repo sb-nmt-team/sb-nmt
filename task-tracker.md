@@ -12,8 +12,11 @@
     * WMT
     * OPUS
     * [JRC-Arquis](https://wt-public.emm4u.eu/Acquis/JRC-Acquis.3.0/corpus/)
-     * он не супербольшой (~750k пар)
-     * его используют авторы статьи
+      * он не супербольшой (~750k пар)
+      * его используют авторы статьи
+      * [en-de.zip](http://opus.nlpl.eu/download.php?f=JRC-Acquis/de-en.txt.zip)
+      * [en-fr.zip](http://opus.nlpl.eu/download.php?f=JRC-Acquis/en-fr.txt.zip)
+      * [en-es.zip](http://opus.nlpl.eu/download.php?f=JRC-Acquis/en-es.txt.zip)
     * **Транслит**
     * Restricted domain
     * Low resource
