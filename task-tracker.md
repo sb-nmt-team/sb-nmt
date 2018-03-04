@@ -11,6 +11,9 @@
   * Данные
     * WMT
     * OPUS
+    * [JRC-Arquis](https://wt-public.emm4u.eu/Acquis/JRC-Acquis.3.0/corpus/)
+     * он не супербольшой (~750k пар)
+     * его используют авторы статьи
     * **Транслит**
     * Restricted domain
     * Low resource
