@@ -4,7 +4,7 @@
   * Github
   * Этот листок
   * Telegram + 2 человека
-  * Время
+  * Время (Для согласования пробуем использовать [https://doodle.com/poll/kkb3ed7aiex2su59])
   * GPU
 
 * Baseline
