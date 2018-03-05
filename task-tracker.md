@@ -60,3 +60,11 @@
   * Паша - [Incorporating Discrete Translation Lexicons into Neural Machine Translation](https://arxiv.org/pdf/1606.02006.pdf)
   * Федя - [Two are Better than One: An Ensemble of Retrieval- and Generation-Based Dialog Systems](https://arxiv.org/pdf/1610.07149.pdf)
   * Степа - [Generating Sentences by Editing Prototypes — text generation](https://arxiv.org/pdf/1709.08878.pdf)
+
+
+-------
+Итого: задачи на следующий раз (после 05.03)
+
+* Обработать данные
+* Написать бейзлайн (со всеми скриптами)
+* Дочитать статьи и определиться с начальными изменениями (с конкретикой)
