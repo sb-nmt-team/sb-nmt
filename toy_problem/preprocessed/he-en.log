@@ -1,0 +1,14 @@
+Ignored unknown characters:
+Read src = he, tgt = en
+	#entries =  298923  total lines =  501034
+After filtering hebrew in english dataset size =  298923
+train:
+	Original size =  239138
+	Filtered ambiguous translations => size =  183050
+validation:
+	Original size =  29892
+	Filtered ambiguous translations => size =  22983
+test:
+	Original size =  29893
+	Filtered ambiguous translations => size =  22873
+

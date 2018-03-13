@@ -1,0 +1,13 @@
+Ignored unknown characters:
+Read src = hewv, tgt = en
+	#entries =  501013  total lines =  501034
+After filtering hebrew in english dataset size =  501013
+train:
+	Original size =  400810
+	Filtered ambiguous translations => size =  400807
+validation:
+	Original size =  50101
+	Filtered ambiguous translations => size =  50100
+test:
+	Original size =  50102
+	Filtered ambiguous translations => size =  50101

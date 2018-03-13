@@ -1,0 +1,14 @@
+Ignored unknown characters:
+Ignored unknown characters:
+Read src = he, tgt = hewv
+	#entries =  298923  total lines =  501034
+train:
+	Original size =  239138
+	Filtered ambiguous translations => size =  174171
+validation:
+	Original size =  29892
+	Filtered ambiguous translations => size =  21873
+test:
+	Original size =  29893
+	Filtered ambiguous translations => size =  21687
+
