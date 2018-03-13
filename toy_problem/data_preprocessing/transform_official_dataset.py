@@ -2,7 +2,7 @@ import numpy as np
 import unicodedata
 import collections
 
-# import matplotlib.pyplot as plt
+import argparse
 from collections import Counter, defaultdict
 import itertools
 import os
@@ -52,7 +52,7 @@ def read_language(path, lang, replace=True):
         chars |= current_chars
     
     if replace:
-        print("Ignored:")
+        print("Ignored unknown characters:")
         for key, value in transliteration.items():
             if value == "?":
                 print(key, "\t", hex(ord(key)), "\t", str(key))
@@ -135,7 +135,7 @@ def filter_multiple_translations(data):
         if ' ' in translations[0]:
             continue
         result[original] = translations[0]
-    print ("size = ",len(result))
+    print ("\tFiltered ambiguous translations => size = ",len(result))
     return result
 
 
@@ -169,6 +169,7 @@ def split_train_test(data, valid_size=0.1, test_size=0.1, seed=42):
     
     
 def pipeline(dataset):
+    print("\tOriginal size = ", len(dataset))
     filtered_dataset = filter_multiple_translations(dataset)
     # return [dataset, filtered_dataset]
     return filtered_dataset
@@ -176,8 +177,11 @@ def pipeline(dataset):
 
 def transformation_pipeline(dataset, valid_size=0.1, test_size=0.1, seed=42):
     train, valid, test = split_train_test(dataset, valid_size, test_size, seed)
+    print("train:")
     trains = pipeline(train)
+    print("validation:")
     valids = pipeline(valid)
+    print("test:")
     tests = pipeline(test)
     
     return trains, valids, tests
@@ -201,17 +205,54 @@ if __name__ == "__main__":
             "he-hewv":("he", "hewv")
         }
 
-    path = "./he-en/"
-    seed = 42
-    valid_size=0.1
-    test_size=0.1
-    should_replace_hebrew = True
-    filter_english = True
-    src_lang, tgt_lang = problems["hewv-en"]
+    parser = argparse.ArgumentParser(description=
+                """Preprocess the official dataset on hebrew transliteration.\n 
+                he -- hebrew
+                hewv -- hebrew with vowel characters.\n
+                Works only he (or hewv) -> hewv (or en).\n 
+                The layout for the input data must be the same as in the official dataset, 
+                plus it MUST contain the 'hebrew_table.txt' file.\n
+                The program IGNORES the original split to 'train-dev-test' and creates a new one.\n
+                It also shows NO WARNINGS when the output_dir already exists and SILENTLY REWRITES its contents.\n
+                The program produces {tgt, src}.{train, dev, test}.txt and {tgt, src}.tokens.txt.\n
+                NOTICE that token lists are different for different replacement modes.
+                """,
+                formatter_class=argparse.ArgumentDefaultsHelpFormatter
+                )
+    parser.add_argument("--problem", help="the language pair to be processed", choices=list(problems.keys()), type=str, required=True)
+    parser.add_argument("--input_dir", help="Location of the input.", type=str, required=True)
+    parser.add_argument("--output_dir", help="Location of the output. Rewritten if exists.", type=str, required=True)
+    parser.add_argument("--seed", help='The seed for random', type=int, default=42)
+    parser.add_argument("--valid_size", help='The rate of the complete dataset to be transformed as a validation dataset', type=float, required=True)
+    parser.add_argument("--test_size", help='The rate of the complete dataset to be transformed as a test dataset', type=float, required=True)
+    parser.add_argument("--replace_hebrew", help="""Replace the original hebrew characters with their approximate meanings in ascii. 
+                    Affects both target and source, but only with he and hewv""", action='store_true')
+    parser.add_argument("--filter_english", help='Remove the hebrew characters that leaked to the english dataset. Affects only the english target', action='store_true')
+
+    args = vars(parser.parse_args())
+
+    # print(args)
+
+    path = args["input_dir"]
+    output_dir = args["output_dir"]
+    seed = args["seed"]
+    valid_size = args["valid_size"]
+    test_size = args["test_size"]
+    should_replace_hebrew = args["replace_hebrew"]
+    filter_english = args["filter_english"]
+
+
+    src_lang, tgt_lang = problems[args["problem"]]
+
+
+
     data, src_chars, tgt_chars = read_dataset(path, should_replace_hebrew=should_replace_hebrew, filter_english=filter_english, src_lang=src_lang, tgt_lang=tgt_lang)
     dataset = transformation_pipeline(data, valid_size, test_size, seed)
 
-    output_dir = "./preprocessed/"
+
+
+    
+    print("Writing datasets to ", output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
     file_patterns = [
@@ -219,7 +260,7 @@ if __name__ == "__main__":
         "{}.dev.txt",
         "{}.test.txt"
     ]
-    print(dataset[0].__class__, len(dataset[0]))
+    # print(dataset[0].__class__, len(dataset[0]))
 
     for current_part, file_pattern in zip(dataset, file_patterns):
         src_path = os.path.join(output_dir, file_pattern.format("src"))
