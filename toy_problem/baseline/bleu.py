@@ -106,8 +106,16 @@ def compute_bleu(reference_corpus, translation_corpus, max_order=4,
 
     return (bleu, precisions, bp, ratio, translation_length, reference_length)
 
+def read_corpus_from_lines(lines, source=False):
+  return list(map(lambda x: [x.split()] if source else x.split(), lines))  
+
 def read_corpus(file, source=False):
-  return list(map(lambda x: [x.split()] if source else x.split(), file.readlines()))
+  return read_corpus_from_lines(file.readlines(), source)
+
+def bleu_from_lines(truth_lines, trans_lines):
+  reference_corpus = read_corpus_from_lines(truth_lines, True)
+  translation_corpus = read_corpus_from_lines(trans_lines)
+  return compute_bleu(reference_corpus, translation_corpus)[0]
 
 def main():
   with open(sys.argv[1]) as truth_file, open(sys.argv[2]) as trans_file:
@@ -115,4 +123,5 @@ def main():
     translation_corpus = read_corpus(trans_file)
     print(compute_bleu(reference_corpus, translation_corpus))
 
-main()
+if __name__ == "__main__":
+  main()
