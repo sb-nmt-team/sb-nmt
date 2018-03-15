@@ -68,3 +68,16 @@
 * Обработать данные
 * Написать бейзлайн (со всеми скриптами)
 * Дочитать статьи и определиться с начальными изменениями (с конкретикой)
+
+-----
+Новые идеи подъехали:
+
+* [Настроить таки детерминированные пайплайны. Не супер новое, но важное]
+* Сделать возможность делать diff на разных моделях
+* Have a way to check hyperparameters
+
+* Look at the errors baseline make. Retrain the baseline with less data. (Maybe). Recomute baseline with 1, 1/2, 1/4, 1/8, ...? What errors does each model make? Hopefully, more => better. Try and understand what kind of errors we make. Be ready to explain what we've found.
+* Read at least one paper and be prepared to explain problems. Look for important things they missed out.
+Chose a paper based by Monday (evening?)
+* Maybe oracle?
+* Implement very basic main-article-like approach
