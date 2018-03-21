@@ -4,6 +4,7 @@
 import torch
 from torch.autograd import Variable
 
+
 def pad_sequence(sequences, batch_first=False, padding_value=0):
     r"""Pad a list of variable length Variables with zero
 
