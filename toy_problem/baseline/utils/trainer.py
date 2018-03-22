@@ -3,9 +3,13 @@ import numpy as np
 import tqdm
 from torch.autograd import Variable
 
+import gc
+
 from metrics.bleu import bleu_from_lines
 from utils.hparams import HParams
 # fix it
+
+import matplotlib.pyplot as plt
 
 
 class Trainer:
@@ -54,10 +58,17 @@ class Trainer:
 		return bleu_from_lines(real_translation, translation)
 
 	def train(self):
+		# plt.ion()
+		# plt.show()
+
 		self.model.train()
 
 		# todo multiple optimizers
 		optimizer = torch.optim.Adam(self.model.parameters(), lr=self.training_hps.starting_learning_rate)
+
+		if self.training_hps.use_cuda:
+			self.model = self.model.cuda()
+			# optimizer = optimizer.cuda()
 
 		for epoch_id in range(self.training_hps.n_epochs):
 
@@ -82,12 +93,18 @@ class Trainer:
 					self.losses.append(loss.cpu().data[0])
 				else:
 					self.losses.append(loss.data[0])
-				print(loss.cpu().data[0])
-				# if (batch_id * batch_sampler.batch_size) % 1000 == 0:
-				# 	display.clear_output(wait=True)
-				# 	print("Last 10 loses mean", np.mean(losses[-10:]))
-				# 	plt.plot(losses)
-				# 	plt.show()
+				# print(loss.cpu().data[0])
+				if (batch_id * self.batch_sampler.batch_size) % 1000 == 0:
+					# display.clear_output(wait=True)
+					print("Last 10 loses mean", np.mean(self.losses[-10:]))
+					# plt.plot(self.losses)
+					# plt.show(block=False)
+					# plt.draw()
+
+			gc.collect()
+			if self.training_hps.use_cuda:
+				torch.cuda.empty_cache()
+
 			self.model.eval()
 			self.bleu.append(self.validate())
 
@@ -95,8 +112,8 @@ class Trainer:
 			self.model.train()
 
 			# todo redo the saving
-			# torch.save(self.model.state_dict(), "last_state.ckpt")
-			# gc.collect()
+			torch.save(self.model.state_dict(), "last_state.ckpt")
+			gc.collect()
 			if self.training_hps.use_cuda:
 				torch.cuda.empty_cache()
 

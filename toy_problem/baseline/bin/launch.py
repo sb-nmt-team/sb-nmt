@@ -29,14 +29,18 @@ def main():
 			training_params = training_params.parse_dict(json.load(fin))
 
 	# that really should be dynamic
-	dataset, src, tgt = read_problem("../../preprocessed/he-en/", n_sents=None)
+	print("model params", hps)
+	print("training_params", training_params)
+	dataset, src, tgt = read_problem("../../preprocessed/hewv-en/", n_sents=None)
 
-	dummy_dataset = {
-		"train": (["'a 'a d y r", "'a 'a h b ckh"], ["a a d i r", "e a h a v k h a"]),
-		"test": (["'a 'a d y r", "'a 'a h b ckh"], ["a a d i r", "e a h a v k h a"]),
-		"dev": (["'a 'a d y r", "'a 'a h b ckh"], ["a a d i r", "e a h a v k h a"])
-	}
-	batch_sampler = BatchSampler(dummy_dataset, src, tgt, training_params.batch_size)
+	# dummy_dataset = {
+	# 	"train": (["'a 'a d y r", "'a 'a h b ckh"], ["a a d i r", "e a h a v k h a"]),
+	# 	"test": (["'a 'a d y r", "'a 'a h b ckh"], ["a a d i r", "e a h a v k h a"]),
+	# 	"dev": (["'a 'a d y r", "'a 'a h b ckh"], ["a a d i r", "e a h a v k h a"])
+	# }
+	# print(dataset["train"])
+	print("train size", len(dataset["train"][0]))
+	batch_sampler = BatchSampler(dataset, src, tgt, training_params.batch_size)
 
 	model = s2s.Seq2Seq(src, tgt, hps, training_params)
 

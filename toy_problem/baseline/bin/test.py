@@ -16,7 +16,7 @@ def main():
 	training_params.set('n_epochs', 25)
 
 	# that really should be dynamic
-	_, src, tgt = read_problem("../../preprocessed/he-en/", n_sents=None)
+	_, src, tgt = read_problem("../../preprocessed/hewv-en/", n_sents=None)
 
 	dummy_dataset = {
 		"train": (["'a 'a d y r", "'a 'a h b ckh"], ["a a d i r", "e a h a v k h a"]),
