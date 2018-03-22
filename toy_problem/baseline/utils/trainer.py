@@ -7,13 +7,20 @@ import gc
 
 from metrics.bleu import bleu_from_lines
 from utils.hparams import HParams
+from utils.translation_utils import run_translation
 # fix it
 
 import matplotlib.pyplot as plt
-
+import os
+import time
 
 class Trainer:
-	def __init__(self, model, batch_sampler, hps, training_hps):
+	def __init__(self, model, batch_sampler, hps, training_hps, train=True):
+		self.timestamp = time.strftime("%Y-%m-%d_%H_%M_%S", time.gmtime())
+		self.result_dir = os.path.join(training_hps.result_dir, training_hps.model_name + "_on_" + self.timestamp)
+		# self.save_path = os.path.join(self.result_dir,)
+		os.makedirs(self.result_dir)
+
 		self.hps = hps
 		self.training_hps = training_hps
 
@@ -24,36 +31,19 @@ class Trainer:
 		# may be create multiple metrics, not only bleu
 		self.bleu = []
 
+		with open(os.path.join(self.result_dir, "trainer.meta"), "w") as f:
+			f.write(repr(self.model) + "\n")
+			f.write("\t==========================\n")
+			f.write(self.timestamp + " GMT\n")
+
 	def reset(self):
 		pass
 
-	def for_translation(self, x, x_mask):
-		if not self.training_hps.use_cuda:
-			x = Variable(torch.from_numpy(x.astype(np.int64))).contiguous()
-			x_mask = Variable(torch.from_numpy(x_mask.astype(np.float32))).contiguous()
-		else:
-			x = Variable(torch.from_numpy(x.astype(np.int64))).contiguous().cuda()
-			x_mask = Variable(torch.from_numpy(x_mask.astype(np.float32))).contiguous().cuda()
-
-		return x, x_mask
-
-	def run_translation(self, src, model, test_data, batch_size):
-		result = []
-		for pos in range(0, test_data.shape[0], batch_size):
-			batch, mask = self.for_translation(*src.convert_batch(test_data[pos:pos + batch_size]))
-			translated = model.translate(batch, mask)
-			result.extend(translated)
-
-		real_result = []
-		for sent in result:
-			sent = sent.split(" ")[1:-1]
-			real_result.append(" ".join(sent))
-		return real_result
 
 	def validate(self):
 		test_data = self.batch_sampler.dev[0]
-		translation = self.run_translation(self.batch_sampler.get_src(), self.model, test_data,
-		                                   self.training_hps.batch_size)
+		translation = run_translation(self.batch_sampler.get_src(), self.model, test_data,
+		                                   self.training_hps)
 		real_translation = [' '.join(x) for x in self.batch_sampler.dev[1]]
 		return bleu_from_lines(real_translation, translation)
 
@@ -108,11 +98,12 @@ class Trainer:
 			self.model.eval()
 			self.bleu.append(self.validate())
 
+			print("After epoch ", epoch_id)
 			print("Bleu: ", self.bleu[-1])
 			self.model.train()
 
 			# todo redo the saving
-			torch.save(self.model.state_dict(), "last_state.ckpt")
+			torch.save(self.model.state_dict(), os.path.join(self.result_dir, "last_state.ckpt"))
 			gc.collect()
 			if self.training_hps.use_cuda:
 				torch.cuda.empty_cache()
@@ -131,5 +122,7 @@ class Trainer:
 			clip=0.25,
 			starting_learning_rate=1e-3, # todo
 			learning_rate_strategy="constant_decay", # todo
-			optimizer="Adam" # todo
+			optimizer="Adam", # todo,
+			result_dir="./",
+			model_name=None,
 		)

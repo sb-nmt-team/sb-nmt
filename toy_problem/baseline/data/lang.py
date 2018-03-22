@@ -25,7 +25,15 @@ def read_problem(path, n_sents=None):
 
     assert len(src) == len(tgt)
     if n_sents is not None:
+      np.random.seed(42)
+      indices = np.arange(len(src))
+      indices = np.random.permutation(indices)
+      src = np.array(src)
+      tgt = np.array(tgt)
+      src = list(src[indices])
+      tgt = list(tgt[indices])
       result[mode] = (src[:n_sents], tgt[:n_sents])
+      np.random.seed(None)
     else:
       result[mode] = (src, tgt)
 

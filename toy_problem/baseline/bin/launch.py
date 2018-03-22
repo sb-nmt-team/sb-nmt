@@ -29,17 +29,36 @@ def main():
 			training_params = training_params.parse_dict(json.load(fin))
 
 	# that really should be dynamic
-	print("model params", hps)
-	print("training_params", training_params)
-	dataset, src, tgt = read_problem("../../preprocessed/hewv-en/", n_sents=None)
+	dataset_name = "../../preprocessed/he-en/"
+	logging_dir = "../../trained_models"
+	experiment_name = "experiment"
+	fraction = 2
+
+	dataset, src, tgt = read_problem(dataset_name, n_sents=None)
+	dataset_size = len(dataset["train"][0])
+	n_sents = dataset_size // fraction
+	# n_sents = 100
+
+	dataset, src, tgt = read_problem(dataset_name, n_sents=n_sents)
+
+
+
+	print("model params\n", json.dumps(dict(hps.items())))
+	print("training_params\n", json.dumps(dict(training_params.items())))
+	print("Using dataset ", dataset_name)
+	print("dataset size", dataset_size)
+	print("Using {} of it".format(n_sents))
+	print("Fraction ", fraction)
+	
+
 
 	# dummy_dataset = {
 	# 	"train": (["'a 'a d y r", "'a 'a h b ckh"], ["a a d i r", "e a h a v k h a"]),
 	# 	"test": (["'a 'a d y r", "'a 'a h b ckh"], ["a a d i r", "e a h a v k h a"]),
 	# 	"dev": (["'a 'a d y r", "'a 'a h b ckh"], ["a a d i r", "e a h a v k h a"])
 	# }
-	# print(dataset["train"])
-	print("train size", len(dataset["train"][0]))
+	# print(dataset["train"][0])
+
 	batch_sampler = BatchSampler(dataset, src, tgt, training_params.batch_size)
 
 	model = s2s.Seq2Seq(src, tgt, hps, training_params)
