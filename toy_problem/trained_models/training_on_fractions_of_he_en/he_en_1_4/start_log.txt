@@ -1,0 +1,9 @@
+model params
+ {"enc_bidirectional": true, "dec_emb_size": 128, "enc_emb_size": 128, "enc_hidden_size": 128, "enc_layers": 1, "dec_dropout": 0.1, "dec_bidirectional": true, "enc_dropout": 0.1, "dec_hidden_size": 128, "dec_layers": 1}
+training_params
+ {"starting_learning_rate": 0.001, "result_dir": "../../trained_models", "learning_rate_strategy": "constant_decay", "n_epochs": 25, "optimizer": "Adam", "use_cuda": true, "max_length": 15, "model_name": "experiment", "clip": 0.25, "batch_size": 128}
+Using dataset  ../../preprocessed/he-en/
+dataset size 183050
+Using 45762 of it
+Fraction  4
+

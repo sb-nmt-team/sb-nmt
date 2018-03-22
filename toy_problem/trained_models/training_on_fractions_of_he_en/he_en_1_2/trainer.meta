@@ -1,0 +1,18 @@
+Seq2Seq(
+  (encoder): EncoderRNN(
+    (embedding): Embedding(90, 128, padding_idx=0)
+    (gru): GRU(128, 128, batch_first=True, dropout=0.1, bidirectional=True)
+  )
+  (decoder): DecoderRNN(
+    (embedding): Embedding(32, 128, padding_idx=0)
+    (attn): Attn(
+      (attn): Linear(in_features=512, out_features=1)
+    )
+    (gru): GRU(384, 128, batch_first=True, dropout=0.1, bidirectional=True)
+    (out): Linear(in_features=256, out_features=32)
+  )
+  (criterion): NLLLoss(
+  )
+)
+	==========================
+2018-03-22_15_08_58 GMT
