@@ -31,8 +31,6 @@ class SearchEngine(object):
             sentence = tuple(sentence.split())
         elif isinstance(sentence, list):
             sentence = tuple(sentence)
-        
-        print(sentence)
 
         if sentence in self.nn_map:
             result = self.nn_map[sentence]
