@@ -27,6 +27,7 @@ git lfs checkout
 
 
 2) Длинная версия
+
   2.1) `se.bin`:
 
   В файле se.bin храниться сохраненный pickle-ом словарь вида {"result": result, "dataset": dataset}, 
@@ -57,7 +58,7 @@ git lfs checkout
    
   Для того, чтобы запустить `run.py` нужны модули `editdistance`, `numpy`, `tqdm`
   
-  3.3) `searchengine.py`
+  2.3) `searchengine.py`
   
   Интерфейс, для общения с кэшом. Через метод `.load(path)` загружается предподсчитаный файл `se.bin`, 
   через `.__call__(sentence, n_neighbours=None)` (то есть оператор круглые скобки)
@@ -72,7 +73,7 @@ git lfs checkout
   При этом вызовется метод `not_found_warning` (который сейчас ничего не делает, но его можно переопределить)
   
   
-  3.4) `utils.py`
+  2.4) `utils.py`
   
   Всякие функции, чтобы все вышеописанное работало. Можете почитать.
   Например, наверное интересно будет менять функцию `calucate_metric`
