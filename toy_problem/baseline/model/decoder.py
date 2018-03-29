@@ -125,7 +125,7 @@ class DecoderRNNRetrivial(nn.Module):
 		                             self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1) +\
 		                             self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1)
 
-	def forward(self, input, encoder_outputs, mask, hidden=None):
+	def forward(self, input, encoder_outputs, mask, hidden=None, search_engine=search_engine):
 		"""
 				input: [B,]
 				encoder_outputs: [B, T, HE]
@@ -138,7 +138,7 @@ class DecoderRNNRetrivial(nn.Module):
 		embedded = self.embedding(input)
 		context = self.attn(hidden, encoder_outputs, mask).view(batch_size, -1)
         if self.match: # calculate scores q
-            hidden_state_from_memory, output_from_memory = self.match(context)
+            hidden_state_from_memory, output_from_memory = search.match(context)
             rnn_input = torch.cat((hidden_state, hidden_state_from_memory, context), -1).view(batch_size, 1, -1)
             retrivial_gate = self.retrivial_gate(rnn_input)
         if self.deep_fusion:
