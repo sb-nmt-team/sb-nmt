@@ -9,6 +9,18 @@ from utils.hparams import merge_hparams
 from model.encoder import EncoderRNN
 from model.decoder import DecoderRNN
 
+from searchengine.searchengine import SearchEngine
+
+class Search(object):
+    def __init__(self):
+        self.searchengine = SearchEngine()
+        self.searchengine.load("se.bin")
+
+    def get_memories(self, batch):
+        for sentence in batch:
+            # sentence = source_lang.
+            self.searchengine(sentence)
+        
 class Seq2Seq(nn.Module):
 	def __init__(self, source_lang, target_lang, hps, training_hps):
 		super(Seq2Seq, self).__init__()
@@ -23,10 +35,14 @@ class Seq2Seq(nn.Module):
 		self.max_length = self.training_hps.max_length
 		self.criterion = nn.NLLLoss(reduce=False, size_average=False)
 
-	def translate(self, input_batch, mask):
+	def translate(self, input_batch, mask, use_search=False):
 		batch_size = input_batch.size()[0]
 		encoder_outputs = self.encoder(input_batch)
-
+        if use_search:
+            memories = self.Search.get_memories(input_batch)
+        
+        
+        
 		hidden = None
 
 		dec_input = Variable(torch.LongTensor([lang.BOS_TOKEN] * batch_size))
