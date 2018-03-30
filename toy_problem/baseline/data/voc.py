@@ -31,7 +31,7 @@ class Vocab:
   def tokenize(self, string):
     """converts string to a list of tokens"""
     tokens = list(filter(len,string.split(self.sep))) \
-	    if self.sep != '' else list(string)
+      if self.sep != '' else list(string)
     return [self.bos] + tokens + [self.eos]
 
   def to_matrix(self, lines, max_len=None):

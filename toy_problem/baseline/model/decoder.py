@@ -35,73 +35,71 @@ class Matcher(nn.Module):
 
 
 class DecoderRNN(nn.Module):
-    def __init__(self, input_size, output_size, hps, training_hps):
-        super(DecoderRNNRetrivial, self).__init__()
-        self.hps = hps
-        self.training_hps = training_hps
-        self.num_directions = int(self.hps.dec_bidirectional) + 1
-        self.output_size = output_size
 
-        self.embedding = nn.Embedding(input_size, self.hps.dec_emb_size, padding_idx=lang.PAD_TOKEN)
-        self.attn = Attn(self.hps)
-        self.gru = nn.GRU(input_size=self.hps.dec_emb_size + \
-                                     self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1),
-                          hidden_size=self.hps.dec_hidden_size,
-                          num_layers=self.hps.dec_layers,
-                          batch_first=True,
-                          dropout=self.hps.dec_dropout,
-                          bidirectional=self.hps.dec_bidirectional)
+  def __init__(self, input_size, output_size, hps, training_hps):
+    super(DecoderRNN, self).__init__()
+    self.hps = hps
+    self.training_hps = training_hps
+    self.num_directions = int(self.hps.dec_bidirectional) + 1
+    self.output_size = output_size
 
-        self.out = nn.Linear(self.hps.dec_hidden_size * self.num_directions, output_size)
-        self.retrivial_gate =         nn.Linear(self.hps.dec_emb_size + \
-                                     self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1) +\
-                                     self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1), 1)
-                                        
+    self.embedding = nn.Embedding(input_size, self.hps.dec_emb_size, padding_idx=lang.PAD_TOKEN)
+    self.attn = Attn(self.hps)
+    self.gru = nn.GRU(input_size=self.hps.dec_emb_size + \
+                                 self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1),
+                      hidden_size=self.hps.dec_hidden_size,
+                      num_layers=self.hps.dec_layers,
+                      batch_first=True,
+                      dropout=self.hps.dec_dropout,
+                      bidirectional=self.hps.dec_bidirectional)
 
-    def forward(self, input, encoder_outputs, mask, hidden=None, search_engine=None):
-        """
-                input: [B,]
-                encoder_outputs: [B, T, HE]
-                hidden: [B, layers * directions, HD]
-        """
-        batch_size = input.size(0)
-        if hidden is None:
-            hidden = self.init_hidden(batch_size)
-        
-        embedded = self.embedding(input)
-        context = self.attn(hidden, encoder_outputs, mask).view(batch_size, -1)
-        if search_engine is not None: # calculate scores q
-            hidden_state_from_memory, output_from_memory = search_engine.match(context)
-            rnn_input = torch.cat((hidden_state, hidden_state_from_memory, context), -1).view(batch_size, 1, -1)
-            retrivial_gate = torch.sigmoid(self.retrivial_gate(rnn_input))
-        if search_engine is not None:
-            hidden_state = retrivial_gate * hidden_state + (1 - retrivial_gate) * hidden_state_from_memory
-            
-        rnn_input = torch.cat((embedded, context), -1).view(batch_size, 1, -1)
+    self.out = nn.Linear(self.hps.dec_hidden_size * self.num_directions, output_size)
+    self.retrivial_gate = nn.Linear(self.hps.dec_emb_size + \
+                                 self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1) +\
+                                 self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1), 1)
 
-        output, next_hidden = self.gru(rnn_input, hidden)
-        output = self.out(output).view(batch_size, self.output_size)
-        output = F.log_softmax(output, -1)
-        if search_engine is not None:
-            output = retrivial_gate * output + (1 - retrivial_gate) * output_from_memory
+  def forward(self, input, encoder_outputs, mask, hidden=None, search_engine=None):
+    """
+        input: [B,]
+        encoder_outputs: [B, T, HE]
+        hidden: [B, layers * directions, HD]
+    """
+    batch_size = input.size(0)
+    if hidden is None:
+      hidden = self.init_hidden(batch_size)
+    embedded = self.embedding(input)
+    context = self.attn(hidden, encoder_outputs, mask).view(batch_size, -1)
+    if search_engine is not None: # calculate scores q
+      hidden_state_from_memory, output_from_memory = search_engine.match(context)
+      rnn_input = torch.cat((hidden_state, hidden_state_from_memory, context), -1).view(batch_size, 1, -1)
+      retrivial_gate = torch.sigmoid(self.retrivial_gate(rnn_input))
+    if search_engine is not None:
+      hidden_state = retrivial_gate * hidden_state + (1 - retrivial_gate) * hidden_state_from_memory
+    rnn_input = torch.cat((embedded, context), -1).view(batch_size, 1, -1)
 
-        return output, next_hidden, context
+    output, next_hidden = self.gru(rnn_input, hidden)
+    output = self.out(output).view(batch_size, self.output_size)
+    output = F.log_softmax(output, -1)
+    if search_engine is not None:
+      output = retrivial_gate * output + (1 - retrivial_gate) * output_from_memory
 
-    def init_hidden(self, batch_size):
-        result = Variable(torch.zeros(self.hps.dec_layers * self.num_directions,
-                                      batch_size,
-                                      self.hps.dec_hidden_size))
-        if self.training_hps.use_cuda:
-            return result.cuda()
-        else:
-            return result
+    return output, next_hidden, context
 
-    @staticmethod
-    def get_default_hparams():
-        return HParams(
-            dec_emb_size=128,
-            dec_hidden_size=128,
-            dec_dropout=0.1,
-            dec_layers=1,
-            dec_bidirectional=True
-        )
+  def init_hidden(self, batch_size):
+    result = Variable(torch.zeros(self.hps.dec_layers * self.num_directions,
+                                  batch_size,
+                                  self.hps.dec_hidden_size))
+    if self.training_hps.use_cuda:
+      return result.cuda()
+    else:
+      return result
+
+  @staticmethod
+  def get_default_hparams():
+    return HParams(
+      dec_emb_size=128,
+      dec_hidden_size=128,
+      dec_dropout=0.1,
+      dec_layers=1,
+      dec_bidirectional=True
+    )
