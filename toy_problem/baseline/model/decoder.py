@@ -6,15 +6,16 @@ from torch.autograd import Variable
 
 from model.attn import Attn
 from data import lang
-from utils.hparams import HParams  
+from utils.hparams import HParams
 
 
 class Matcher(nn.Module):
-    
+
     def __init__(self, hps):
         self.M = Parameter(torch.randn((hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1),\
                                        hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1),\
                                        1)))
+
     def forward(context, memories):
         '''
         Input:
@@ -35,7 +36,6 @@ class Matcher(nn.Module):
 
 
 class DecoderRNN(nn.Module):
-
   def __init__(self, input_size, output_size, hps, training_hps):
     super(DecoderRNN, self).__init__()
     self.hps = hps

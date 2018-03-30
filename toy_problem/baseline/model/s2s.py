@@ -10,9 +10,7 @@ from model.encoder import EncoderRNN
 from model.decoder import DecoderRNN
 from model.translation_memory import TranslationMemory
 
-    
 class Seq2Seq(nn.Module):
-
   def __init__(self, source_lang, target_lang, hps, training_hps, training_set=None):
     super(Seq2Seq, self).__init__()
     self.hps = hps
@@ -33,6 +31,7 @@ class Seq2Seq(nn.Module):
   def translate(self, input_batch, mask, use_search=False):
     batch_size = input_batch.size()[0]
     encoder_outputs = self.encoder(input_batch)
+
     if use_search:
       assert self.search is not None, "No sample pairs for translation memory, did you want it?"
       search_engine = self.search.fit(input_batch)
@@ -67,7 +66,7 @@ class Seq2Seq(nn.Module):
     return [' '.join(map(self.target_lang.get_word, elem)) for elem in translations]
 
   def forward(self, input_batch, mask, output_batch, out_mask):
-        encoder_outputs = self.encoder(input_batch)
+    encoder_outputs = self.encoder(input_batch)
 
     hidden = None
 
@@ -80,7 +79,7 @@ class Seq2Seq(nn.Module):
     return loss
   
   def get_hiddens_and_contexts(self, input_batch, mask, output_batch, out_mask):
-      encoder_outputs = self.encoder(input_batch)
+    encoder_outputs = self.encoder(input_batch)
 
     hidden = None
 
