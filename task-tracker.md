@@ -81,3 +81,16 @@
 Chose a paper based by Monday (evening?)
 * Maybe oracle?
 * Implement very basic main-article-like approach
+
+
+----
+Планы после 26-го марта
+* Beam search?
+* Overfitting test
+* Force to ignore decoded sentences and use the found examples
+* 1/4 data for search
+* Какие типы проблем решает поиск (потеоретизировать и проверить)
+* Провести замеры uncertanity на гласных и согласных. Возможно, реализовать примитивную модель выравнивания.
+* Оценить как-нибудь capacity бейзлайна
+* Начать придумывать метрики близости для перевода
+* Начать строить фразовые таблицы (на чём-нибудь)
