@@ -2,7 +2,7 @@ from search_engine.searchengine import SearchEngine
 
 class TranslationMemory(object):
 
-  def __init__(self, s2s, top_size=3, database):
+  def __init__(self, s2s, database, top_size=3):
     self.searchengine = SearchEngine()
     self.searchengine.load("../search_engine/se.bin")
     self.s2s = s2s
