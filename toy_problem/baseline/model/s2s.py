@@ -33,7 +33,7 @@ class Seq2Seq(nn.Module):
     encoder_outputs = self.encoder(input_batch)
 
     if use_search:
-      assert self.search is not None, "No sample pairs for translation memory, did you want it?"
+      assert self.translationmemory is not None, "No sample pairs for translation memory, did you want it?"
       self.translationmemory.fit(input_batch)
     hidden = None
 

@@ -8,6 +8,7 @@ from model.attn import Attn
 from data import lang
 from utils.hparams import HParams
 
+
 class DecoderRNN(nn.Module):
   def __init__(self, input_size, output_size, hps, training_hps):
     super(DecoderRNN, self).__init__()

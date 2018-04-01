@@ -61,7 +61,7 @@ class TranslationMemory(object):
     context = Variable(FloatTensor(B, H))
     '''
     B,  H = context.shape
-    context = context.contiguous().view(B, 1, -1, self.s2s.hps.enc_hidden_size).contiguous()
+    context = context.contiguous().view(B, 1, -1, self.hps.enc_hidden_size).contiguous()
     energies = (context *  self.contexts)
     energies = energies.contiguous().sum(dim=2).sum(dim=2)
     energies = torch.nn.Softmax(dim=1)(energies)
