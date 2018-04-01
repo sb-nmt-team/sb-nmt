@@ -70,7 +70,7 @@ class Trainer:
           output = output.cuda()
           output_mask = output_mask.cuda()
 
-        loss = self.model(input, input_mask, output, output_mask)
+        loss = self.model(input, input_mask, output, output_mask, use_search=self.training_hps.use_tm_on_train)
         optimizer.zero_grad()
 
         loss.backward()
@@ -125,5 +125,6 @@ class Trainer:
       optimizer="Adam", # todo,
       result_dir="./",
       model_name=None,
-      use_tm_on_test=False
+      use_tm_on_test=False,
+      use_tm_on_train=False,
     )

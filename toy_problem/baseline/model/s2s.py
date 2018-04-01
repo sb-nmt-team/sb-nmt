@@ -66,14 +66,22 @@ class Seq2Seq(nn.Module):
         break
     return [' '.join(map(self.target_lang.get_word, elem)) for elem in translations]
 
-  def forward(self, input_batch, mask, output_batch, out_mask):
+  def forward(self, input_batch, mask, output_batch, out_mask, use_search=False):
     encoder_outputs = self.encoder(input_batch)
+
+    if use_search:
+      assert self.translationmemory is not None, "No sample pairs for translation memory, did you want it?"
+      self.translationmemory.fit(input_batch)
 
     hidden = None
 
     loss = 0.0
     for i in range(out_mask.size()[1] - 1):
-      output, hidden, _ = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden)
+      if use_search:
+        output, hidden, _ = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden,\
+                                         translationmemory=self.translationmemory)
+      else:
+        output, hidden, _ = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden)
       loss += (self.criterion(output, output_batch[:, i + 1]) * out_mask[:, i + 1]).sum()
 
     loss /= out_mask.sum()

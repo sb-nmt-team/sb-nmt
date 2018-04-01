@@ -20,9 +20,8 @@ class TranslationMemory(object):
     self.target_lang = model.target_lang
     self.top_size = hps.tm_top_size
     self.database = {tuple(x[0]): tuple(x[1]) for x in zip(*read_problem(hps.tm_train_dataset_path)[0]['train'])}
-    self.M = Parameter(torch.randn((hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1),\
-                                   hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1),\
-                                   1)))
+    self.M = Parameter(torch.randn(1, 1, hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1),\
+                                   hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1)))
 
   def fit(self, input_sentences):
     batch_size = len(input_sentences)
@@ -47,7 +46,7 @@ class TranslationMemory(object):
                                      self.hps.dec_hidden_size)
 #     input_mask = input_mask.view(batch_size, -1)
     self.contexts = self.contexts.view(batch_size, -1,\
-                                     self.hps.enc_layers * (self.hps.enc_bidirectional + 1),\
+                                     self.hps.enc_layers * (self.hps.enc_bidirectional + 1) *\
                                      self.hps.enc_hidden_size)
 #     output_mask = output_mask.view(batch_size, -1)
     
@@ -60,9 +59,10 @@ class TranslationMemory(object):
     '''
     context = Variable(FloatTensor(B, H))
     '''
-    B,  H = context.shape
-    context = context.contiguous().view(B, 1, -1, self.hps.enc_hidden_size).contiguous()
-    energies = (context *  self.contexts)
+    B, tm_size, H = self.contexts.shape
+    context = context.contiguous().view(B, 1, H, 1).contiguous()
+    energies = (context *  self.contexts.view(B, tm_size, 1, H))
+    energies = (self.M * energies)
     energies = energies.contiguous().sum(dim=2).sum(dim=2)
     energies = torch.nn.Softmax(dim=1)(energies)
     hidden = (energies.view(B, -1, 1, 1) * self.hiddens).sum(dim=1)
