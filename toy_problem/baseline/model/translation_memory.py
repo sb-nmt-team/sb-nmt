@@ -2,19 +2,27 @@ from search_engine.searchengine import SearchEngine
 from torch.autograd import Variable
 import torch
 import numpy as np
+from utils.hparams import HParams
+from torch.nn import Parameter
+
+from data.lang import read_problem
 
 class TranslationMemory(object):
 
-  def __init__(self, s2s, database, top_size=3, search_engine=None):
-    if search_engine == None:
-      search_engine = SearchEngine()
-      search_engine.load("../search_engine/se.bin")
-    self.searchengine = search_engine
-    self.s2s = s2s
-    self.source_lang = s2s.source_lang
-    self.target_lang = s2s.target_lang
-    self.top_size = top_size
-    self.database = dict(database)
+  def __init__(self, model, hps, searchengine=None):
+    self.model = model
+    self.hps = hps
+    if searchengine == None:
+      searchengine = SearchEngine()
+      searchengine.load(hps.tm_bin_path)
+    self.searchengine = searchengine
+    self.source_lang = model.source_lang
+    self.target_lang = model.target_lang
+    self.top_size = hps.tm_top_size
+    self.database = {tuple(x[0]): tuple(x[1]) for x in zip(*read_problem(hps.tm_train_dataset_path)[0]['train'])}
+    self.M = Parameter(torch.randn((hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1),\
+                                   hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1),\
+                                   1)))
 
   def fit(self, input_sentences):
     batch_size = len(input_sentences)
@@ -23,10 +31,6 @@ class TranslationMemory(object):
       sentence = self.source_lang.convert(sentence, backward=True)
       found_inputs = [x[1] for x in self.searchengine(sentence, n_neighbours=self.top_size)]
       found_outputs = list(map(self.database.get, found_inputs))
-#       print('(DEBUG) self.searchengine(sentence, n_neighbours=self.top_size):', self.searchengine(sentence))
-#       print('(DEBUG) sentence', sentence)
-#       print('(DEBUG) len(found_outputs)', len(found_outputs))
-#       print('(DEBUG) found_outputs', found_outputs)
       assert(len(found_outputs) == self.top_size)
       search_inputs += found_inputs
       search_outputs += found_outputs
@@ -37,16 +41,14 @@ class TranslationMemory(object):
     search_outputs, output_mask = self.target_lang.convert_batch(search_outputs)
     search_outputs = Variable(torch.from_numpy(search_outputs.astype(np.int64))).contiguous()
     output_mask = Variable(torch.from_numpy(output_mask.astype(np.float32))).contiguous()
-# #     print('(DEBUG) search_inputs.shape:',search_inputs.shape)
-#     print('(DEBUG) search_outputs.shape:',search_outputs.shape)
-    self.hiddens, self.contexts = self.s2s.get_hiddens_and_contexts(search_inputs, input_mask, search_outputs, output_mask)
+    self.hiddens, self.contexts = self.model.get_hiddens_and_contexts(search_inputs, input_mask, search_outputs, output_mask)
     self.hiddens = self.hiddens.view(batch_size, -1,\
-                                     self.s2s.hps.dec_layers * (self.s2s.hps.dec_bidirectional + 1),\
-                                     self.s2s.hps.dec_hidden_size)
+                                     self.hps.dec_layers * (self.hps.dec_bidirectional + 1),\
+                                     self.hps.dec_hidden_size)
 #     input_mask = input_mask.view(batch_size, -1)
     self.contexts = self.contexts.view(batch_size, -1,\
-                                     self.s2s.hps.enc_layers * (self.s2s.hps.enc_bidirectional + 1),\
-                                     self.s2s.hps.enc_hidden_size)
+                                     self.hps.enc_layers * (self.hps.enc_bidirectional + 1),\
+                                     self.hps.enc_hidden_size)
 #     output_mask = output_mask.view(batch_size, -1)
     
 #     search_inputs = search_inputs.view(batch_size, self.top_size, -1)
@@ -66,3 +68,12 @@ class TranslationMemory(object):
     hidden = (energies.view(B, -1, 1, 1) * self.hiddens).sum(dim=1)
 #     output = (energies.view(B, -1, 1, 1) * self.outputs).sum(dim=1)
     return hidden.permute(1,0,2) #, output
+
+  @staticmethod
+  def get_default_hparams():
+    return HParams(
+      tm_init = False,
+      tm_bin_path = "../search_engine/se.bin",
+      tm_top_size = 3,
+      tm_train_dataset_path = "../../preprocessed/he-en/"
+    )

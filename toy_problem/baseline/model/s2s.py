@@ -11,7 +11,7 @@ from model.decoder import DecoderRNN
 from model.translation_memory import TranslationMemory
 
 class Seq2Seq(nn.Module):
-  def __init__(self, source_lang, target_lang, hps, training_hps, training_set=None):
+  def __init__(self, source_lang, target_lang, hps, training_hps, searchengine=None):
     super(Seq2Seq, self).__init__()
     self.hps = hps
     self.training_hps = training_hps
@@ -23,10 +23,10 @@ class Seq2Seq(nn.Module):
 
     self.max_length = self.training_hps.max_length
     self.criterion = nn.NLLLoss(reduce=False, size_average=False)
-    if training_set:
-      self.search = TranslationMemory(self, training_set)
+    if hps.tm_init:
+      self.translationmemory = TranslationMemory(self, hps=hps, searchengine=searchengine)
     else:
-      self.search = None
+      self.translationmemory = None
 
   def translate(self, input_batch, mask, use_search=False):
     batch_size = input_batch.size()[0]
@@ -34,7 +34,7 @@ class Seq2Seq(nn.Module):
 
     if use_search:
       assert self.search is not None, "No sample pairs for translation memory, did you want it?"
-      search_engine = self.search.fit(input_batch)
+      self.translationmemory.fit(input_batch)
     hidden = None
 
     dec_input = Variable(torch.LongTensor([lang.BOS_TOKEN] * batch_size))
@@ -46,7 +46,8 @@ class Seq2Seq(nn.Module):
     converged = np.zeros(shape=(batch_size,))
     for i in range(self.max_length):
       if use_search:
-        output, hidden, _ = self.decoder(dec_input, encoder_outputs, mask=mask, hidden=hidden, search_engine=self.search)
+        output, hidden, _ = self.decoder(dec_input, encoder_outputs, mask=mask, hidden=hidden,\
+                                         translationmemory=self.translationmemory)
       else:
         output, hidden, _ = self.decoder(dec_input, encoder_outputs, mask=mask, hidden=hidden)
       _, output_idx = torch.max(output, -1)
@@ -101,4 +102,5 @@ class Seq2Seq(nn.Module):
 
   @staticmethod
   def get_default_hparams():
-    return merge_hparams(EncoderRNN.get_default_hparams(), DecoderRNN.get_default_hparams())
+    return merge_hparams(EncoderRNN.get_default_hparams(), DecoderRNN.get_default_hparams(),\
+                         TranslationMemory.get_default_hparams())

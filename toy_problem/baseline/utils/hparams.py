@@ -4,12 +4,12 @@
 import six
 
 
-def merge_hparams(one, other):
+def merge_hparams(*objects):
   hps = HParams()
-  for k, v in one.items():
-    hps.set(k, v)
-  for k, v in other.items():
-    hps.set(k, v)
+  for object_ in objects:
+    for k, v in object_.items():
+      assert k not in hps._items.keys(), "repeating key {}".format(k)
+      hps.set(k, v)
   return hps
 
 class HParams(object):

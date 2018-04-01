@@ -1,5 +1,5 @@
 import pickle
-from utils import find_closest
+from .utils import find_closest
 
 class SearchEngine(object):
     def __init__(self):

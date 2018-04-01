@@ -58,7 +58,7 @@ def main():
   #   "dev": (["'a 'a d y r", "'a 'a h b ckh"], ["a a d i r", "e a h a v k h a"])
   # }
   # print(dataset["train"][0])
-
+    
   batch_sampler = BatchSampler(dataset, src, tgt, training_params.batch_size)
 
   model = s2s.Seq2Seq(src, tgt, hps, training_params)

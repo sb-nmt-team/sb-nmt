@@ -8,33 +8,6 @@ from model.attn import Attn
 from data import lang
 from utils.hparams import HParams
 
-
-class Matcher(nn.Module):
-
-    def __init__(self, hps):
-        self.M = Parameter(torch.randn((hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1),\
-                                       hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1),\
-                                       1)))
-
-    def forward(context, memories):
-        '''
-        Input:
-        context - FloatTensor(batch_size, context_size)
-        memories - contexts, hiddens, target_symbols, where
-          contexts - FloatTensor(batch_size, map_size, context_size)
-          hiddens - FloatTensor(batch_size, map_size, hidden_size)
-          target_symbols - FloatTensor(batch_size, map_size, n_chars)
-        
-        '''
-        contexts, hiddens, target_symbols = memories
-        B, map_size, context_size = hiddens.shape
-        distances = torch.bmm(contexts, context.view(B, context_size, 1))
-        energies = torch.softmax(distances, dim=1).view(B, map_size)
-        hidden = (energies.view(B, map_size, 1) * hiddens).sum(dim=1)
-        target_symbol = (energies.view(B, map_size, 1) * target_symbols).sum(dim=1)
-        return hidden, target_symbol
-
-
 class DecoderRNN(nn.Module):
   def __init__(self, input_size, output_size, hps, training_hps):
     super(DecoderRNN, self).__init__()
@@ -58,7 +31,7 @@ class DecoderRNN(nn.Module):
                                  self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1) +\
                                  self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1), 1)
 
-  def forward(self, input, encoder_outputs, mask, hidden=None, search_engine=None):
+  def forward(self, input, encoder_outputs, mask, hidden=None, translationmemory=None):
     """
         input: [B,]
         encoder_outputs: [B, T, HE]
@@ -70,14 +43,14 @@ class DecoderRNN(nn.Module):
     embedded = self.embedding(input)
     context = self.attn(hidden, encoder_outputs, mask)
     assert context.shape[0] == batch_size, len(context.shape) == 2
-    if search_engine is not None: # calculate scores q
-      hidden_state_from_memory = search_engine.match(context)
+    if translationmemory is not None: # calculate scores q
+      hidden_state_from_memory = translationmemory.match(context)
 
       retrivial_gate_input = torch.cat((hidden.permute(1, 0, 2).contiguous().view(batch_size, -1),\
                                         hidden_state_from_memory.permute(1, 0, 2).contiguous().view(batch_size, -1),\
                                         context.contiguous().view(batch_size, -1)), 1)
       retrivial_gate = torch.sigmoid(self.retrivial_gate(retrivial_gate_input))
-    if search_engine is not None:
+    if translationmemory is not None:
       hidden = retrivial_gate * hidden + (1 - retrivial_gate) * hidden_state_from_memory
     rnn_input = torch.cat((embedded, context), -1).view(batch_size, 1, -1)
 

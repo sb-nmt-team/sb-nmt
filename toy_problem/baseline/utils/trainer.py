@@ -125,4 +125,5 @@ class Trainer:
       optimizer="Adam", # todo,
       result_dir="./",
       model_name=None,
+      use_tm_on_test=False
     )
