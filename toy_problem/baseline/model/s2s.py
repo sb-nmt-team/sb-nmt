@@ -24,7 +24,7 @@ class Seq2Seq(nn.Module):
     self.max_length = self.training_hps.max_length
     self.criterion = nn.NLLLoss(reduce=False, size_average=False)
     if training_set:
-      self.search = TranslationMemory(self)
+      self.search = TranslationMemory(self, training_set)
     else:
       self.search = None
 
@@ -46,7 +46,7 @@ class Seq2Seq(nn.Module):
     converged = np.zeros(shape=(batch_size,))
     for i in range(self.max_length):
       if use_search:
-        output, hidden, _ = self.decoder(dec_input, decoder_outputs, mask=mask, hidden=hidden, search_engine=self.search)
+        output, hidden, _ = self.decoder(dec_input, encoder_outputs, mask=mask, hidden=hidden, search_engine=self.search)
       else:
         output, hidden, _ = self.decoder(dec_input, encoder_outputs, mask=mask, hidden=hidden)
       _, output_idx = torch.max(output, -1)
@@ -80,18 +80,23 @@ class Seq2Seq(nn.Module):
   
   def get_hiddens_and_contexts(self, input_batch, mask, output_batch, out_mask):
     encoder_outputs = self.encoder(input_batch)
-
+    B, *_ = input_batch.shape
     hidden = None
 
     loss = 0.0
-    hiddens, contexts = [], []
+    hiddens = Variable(torch.zeros((B, out_mask.size()[1] - 1,\
+                                 self.hps.dec_layers * (self.hps.dec_bidirectional + 1) *\
+                                 self.hps.dec_hidden_size)))
+    contexts = Variable(torch.zeros((B, out_mask.size()[1] - 1,\
+                                 self.hps.enc_layers * (self.hps.enc_bidirectional + 1) *\
+                                 self.hps.enc_hidden_size)))
+    
     for i in range(out_mask.size()[1] - 1):
       output, hidden, context = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden)
-      hiddens.append(hidden)
-      contexts.append(context)
-    assert(len(hidden.shape) == 3)
-    assert(len(hiddens.shape) == 4)
-    return torch.cat(hiddens), torch.cat(contexts)
+      hiddens[:, i, :] = hidden
+      contexts[:, i, :] = context
+
+    return contexts, hiddens
 
 
   @staticmethod

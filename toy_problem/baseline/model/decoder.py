@@ -54,9 +54,9 @@ class DecoderRNN(nn.Module):
                       bidirectional=self.hps.dec_bidirectional)
 
     self.out = nn.Linear(self.hps.dec_hidden_size * self.num_directions, output_size)
-    self.retrivial_gate = nn.Linear(self.hps.dec_emb_size + \
-                                 self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1) +\
-                                 self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1), 1)
+    self.retrivial_gate = nn.Linear(self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1) + \
+                                 self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1) +\
+                                 self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1), 1)
 
   def forward(self, input, encoder_outputs, mask, hidden=None, search_engine=None):
     """
@@ -68,20 +68,24 @@ class DecoderRNN(nn.Module):
     if hidden is None:
       hidden = self.init_hidden(batch_size)
     embedded = self.embedding(input)
-    context = self.attn(hidden, encoder_outputs, mask).view(batch_size, -1)
+    context = self.attn(hidden, encoder_outputs, mask)
+    assert context.shape[0] == batch_size, len(context.shape) == 2
     if search_engine is not None: # calculate scores q
-      hidden_state_from_memory, output_from_memory = search_engine.match(context)
-      rnn_input = torch.cat((hidden_state, hidden_state_from_memory, context), -1).view(batch_size, 1, -1)
-      retrivial_gate = torch.sigmoid(self.retrivial_gate(rnn_input))
+      hidden_state_from_memory = search_engine.match(context)
+
+      retrivial_gate_input = torch.cat((hidden.permute(1, 0, 2).contiguous().view(batch_size, -1),\
+                                        hidden_state_from_memory.permute(1, 0, 2).contiguous().view(batch_size, -1),\
+                                        context.contiguous().view(batch_size, -1)), 1)
+      retrivial_gate = torch.sigmoid(self.retrivial_gate(retrivial_gate_input))
     if search_engine is not None:
-      hidden_state = retrivial_gate * hidden_state + (1 - retrivial_gate) * hidden_state_from_memory
+      hidden = retrivial_gate * hidden + (1 - retrivial_gate) * hidden_state_from_memory
     rnn_input = torch.cat((embedded, context), -1).view(batch_size, 1, -1)
 
     output, next_hidden = self.gru(rnn_input, hidden)
     output = self.out(output).view(batch_size, self.output_size)
     output = F.log_softmax(output, -1)
-    if search_engine is not None:
-      output = retrivial_gate * output + (1 - retrivial_gate) * output_from_memory
+#     if search_engine is not None:
+#       output = retrivial_gate * output + (1 - retrivial_gate) * output_from_memory
 
     return output, next_hidden, context
 

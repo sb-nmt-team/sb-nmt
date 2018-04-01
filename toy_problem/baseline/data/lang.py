@@ -60,10 +60,16 @@ class Lang:
         self.idx2word[idx] = word
         self.word2idx[word] = idx
 
-  def convert(self, sentence):
+  def convert(self, sentence, backward=False):
     if isinstance(sentence, str):
       sentence = sentence.strip().split()
-    return [BOS_TOKEN] + list(map(lambda word: self.word2idx[word], sentence)) + [EOS_TOKEN]
+    if backward:
+      converted = ' '.join(map(self.get_word, sentence))
+      if '<S>' in converted:
+        converted = converted[3:converted.find('</S>')]
+      return converted
+    else:
+      return [BOS_TOKEN] + list(map(lambda word: self.word2idx[word], sentence)) + [EOS_TOKEN]
 
   def convert_batch(self, sents):
 
