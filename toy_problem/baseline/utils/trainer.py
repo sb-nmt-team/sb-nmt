@@ -13,6 +13,7 @@ from utils.translation_utils import run_translation
 import matplotlib.pyplot as plt
 import os
 import time
+import itertools
 
 class Trainer:
   def __init__(self, model, batch_sampler, hps, training_hps, train=True):
@@ -59,7 +60,7 @@ class Trainer:
     if self.training_hps.use_cuda:
       self.model = self.model.cuda()
       # optimizer = optimizer.cuda()
-
+    self.training_hps.use_tm_on_test = False
     for epoch_id in range(self.training_hps.n_epochs):
 
       for batch_id, ((input, input_mask), (output, output_mask)) in \
@@ -70,7 +71,7 @@ class Trainer:
           output = output.cuda()
           output_mask = output_mask.cuda()
 
-        loss = self.model(input, input_mask, output, output_mask, use_search=self.training_hps.use_tm_on_train)
+        loss = self.model(input, input_mask, output, output_mask, use_search=False)
         optimizer.zero_grad()
 
         loss.backward()
@@ -107,7 +108,56 @@ class Trainer:
       gc.collect()
       if self.training_hps.use_cuda:
         torch.cuda.empty_cache()
+    self.training_hps.use_tm_on_test = True
+    
+    optimizer = torch.optim.Adam(itertools.chain.from_iterable((self.model.parameters(), self.model.translationmemory.parameters())), lr=self.training_hps.starting_learning_rate)
+    for epoch_id in range(self.training_hps.n_tm_epochs):
 
+      for batch_id, ((input, input_mask), (output, output_mask)) in \
+        tqdm.tqdm(enumerate(self.batch_sampler), total=len(self.batch_sampler)):
+        if self.training_hps.use_cuda:
+          input = input.cuda()
+          input_mask = input_mask.cuda()
+          output = output.cuda()
+          output_mask = output_mask.cuda()
+
+        loss = self.model(input, input_mask, output, output_mask, use_search=True)
+        optimizer.zero_grad()
+
+        loss.backward()
+        torch.nn.utils.clip_grad_norm(self.model.parameters(), self.training_hps.clip)
+        optimizer.step()
+
+        # todo create hooks
+        # it's really doubtfull to hold all of them
+        if self.training_hps.use_cuda:
+          self.losses.append(loss.cpu().data[0])
+        else:
+          self.losses.append(loss.data[0])
+        # print(loss.cpu().data[0])
+        if (batch_id * self.batch_sampler.batch_size) % 1000 == 0:
+          # display.clear_output(wait=True)
+          print("Last 10 loses mean", np.mean(self.losses[-10:]))
+          # plt.plot(self.losses)
+          # plt.show(block=False)
+          # plt.draw()
+
+      gc.collect()
+      if self.training_hps.use_cuda:
+        torch.cuda.empty_cache()
+
+      self.model.eval()
+      self.bleu.append(self.validate())
+
+      print("After epoch ", epoch_id)
+      print("Bleu: ", self.bleu[-1])
+      self.model.train()
+
+      # todo redo the saving
+      torch.save(self.model.state_dict(), os.path.join(self.result_dir, "last_state.ckpt"))
+      gc.collect()
+      if self.training_hps.use_cuda:
+        torch.cuda.empty_cache()
   def get_metrics(self):
     # todo return metrics and not this stuff
     return self.losses, self.bleu
@@ -126,5 +176,5 @@ class Trainer:
       result_dir="./",
       model_name=None,
       use_tm_on_test=False,
-      use_tm_on_train=False,
+      n_tm_epochs=10,
     )

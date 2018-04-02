@@ -4,6 +4,7 @@ import torch
 import numpy as np
 from utils.hparams import HParams
 from torch.nn import Parameter
+import torch.nn as nn
 
 from data.lang import read_problem
 
@@ -20,7 +21,10 @@ class TranslationMemory(object):
     self.target_lang = model.target_lang
     self.top_size = hps.tm_top_size
     self.database = {tuple(x[0]): tuple(x[1]) for x in zip(*read_problem(hps.tm_train_dataset_path)[0]['train'])}
-    self.M = Parameter(torch.randn(1, 1, hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1),\
+    self.M = Parameter((torch.randn(hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1),\
+                                   hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1)) * 0.01 +\
+                       torch.eye(hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1))).view(1, 1,\
+                                   hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1),\
                                    hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1)))
 
   def fit(self, input_sentences):
@@ -53,7 +57,8 @@ class TranslationMemory(object):
 #     search_inputs = search_inputs.view(batch_size, self.top_size, -1)
 #     search_outputs = search_outputs.view(batch_size, self.top_size, -1)
 #     return search_inputs, input_mask, search_outputs, output_mask
-
+  def parameters(self):
+    yield self.M
 
   def match(self, context):
     '''
