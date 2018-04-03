@@ -106,7 +106,18 @@ class Seq2Seq(nn.Module):
       contexts[:, i, :] = context
 
     return contexts, hiddens
+  
+  def cuda(self):
+    self.translationmemory = self.translationmemory.cuda()
+    self.encoder = self.encoder.cuda()
+    self.decoder = self.decoder.cuda()
+    return super(Seq2Seq, self).cuda()
 
+  def cpu(self):
+    self.translationmemory = self.translationmemory.cpu()
+    self.encoder = self.encoder.cpu()
+    self.decoder = self.decoder.cpu()
+    return super(Seq2Seq, self).cpu()
 
   @staticmethod
   def get_default_hparams():

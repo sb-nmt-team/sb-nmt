@@ -10,7 +10,7 @@ from utils.hparams import HParams
 from utils.translation_utils import run_translation
 # fix it
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import os
 import time
 import itertools
@@ -77,6 +77,9 @@ class Trainer:
         loss.backward()
         torch.nn.utils.clip_grad_norm(self.model.parameters(), self.training_hps.clip)
         optimizer.step()
+        gc.collect()
+        if self.training_hps.use_cuda:
+            torch.cuda.empty_cache()
 
         # todo create hooks
         # it's really doubtfull to hold all of them
@@ -110,6 +113,7 @@ class Trainer:
         torch.cuda.empty_cache()
     self.training_hps.use_tm_on_test = True
     
+    #print(list(itertools.chain.from_iterable((self.model.parameters(), self.model.translationmemory.parameters()))))
     optimizer = torch.optim.Adam(itertools.chain.from_iterable((self.model.parameters(), self.model.translationmemory.parameters())), lr=self.training_hps.starting_learning_rate)
     for epoch_id in range(self.training_hps.n_tm_epochs):
 
@@ -127,6 +131,9 @@ class Trainer:
         loss.backward()
         torch.nn.utils.clip_grad_norm(self.model.parameters(), self.training_hps.clip)
         optimizer.step()
+        gc.collect()
+        if self.training_hps.use_cuda:
+            torch.cuda.empty_cache()
 
         # todo create hooks
         # it's really doubtfull to hold all of them
