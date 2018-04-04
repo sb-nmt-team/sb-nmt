@@ -22,14 +22,17 @@ class TranslationMemory(object):
     self.target_lang = model.target_lang
     self.top_size = hps.tm_top_size
     self.database = {tuple(x[0]): tuple(x[1]) for x in zip(*read_problem(hps.tm_train_dataset_path)[0]['train'])}
-    M_inits = (torch.randn(hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1),\
-                                   hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1)) * 0.01 +\
-                       torch.eye(hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1))).view(1, 1,\
-                                   hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1),\
-                                   hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1))
+    is_bidir = int(hps.enc_bidirectional) + 1
+    size = hps.enc_hidden_size * is_bidir
+    #M_inits = torch.randn(size, size) * 0.01 +\
+    #                   torch.eye(size).view(1, 1, size, size)
+    M_inits = torch.randn(size, size) * 0.01 +\
+                       torch.eye(size)
 
     #self.M = Variable(M_inits.cuda(), requires_grad=True)
     self.M = Variable(M_inits, requires_grad=True)
+    #print("M size", self.M.size())
+
 
   def fit(self, input_sentences):
     batch_size = len(input_sentences)
@@ -37,7 +40,9 @@ class TranslationMemory(object):
     input_sentences = input_sentences.clone()
     for sentence in input_sentences.data.cpu().numpy():
       sentence = self.source_lang.convert(sentence, backward=True)
+ #     print(sentence)
       found_inputs = [x[1] for x in self.searchengine(sentence, n_neighbours=self.top_size)]
+#      print(found_inputs)
       found_outputs = list(map(self.database.get, found_inputs))
       assert(len(found_outputs) == self.top_size)
       search_inputs += found_inputs
@@ -77,7 +82,7 @@ class TranslationMemory(object):
   def parameters(self):
     #return []
     yield self.M
-
+    """
   def match(self, context):
     '''
     context = Variable(FloatTensor(B, H))
@@ -85,6 +90,7 @@ class TranslationMemory(object):
     B, tm_size, H = self.contexts.shape
     context = context.contiguous().view(B, 1, H, 1).contiguous()
     energies = (context *  self.contexts.view(B, tm_size, 1, H))
+    #print(self.contexts.size())
     #print("energies", energies)
     #print("M", self.M)
     energies = (self.M * energies)
@@ -93,7 +99,25 @@ class TranslationMemory(object):
     hidden = (energies.view(B, -1, 1, 1) * self.hiddens).sum(dim=1)
 #     output = (energies.view(B, -1, 1, 1) * self.outputs).sum(dim=1)
     return hidden.permute(1,0,2) #, output
-
+"""
+  def match(self, context):
+    '''
+    context = Variable(FloatTensor(B, H))
+    '''
+    B, tm_size, H = self.contexts.shape
+    #print(self.M.size(), context.size())
+    context = context.matmul(self.M)
+    context = context.contiguous().view(B, 1, H).contiguous()
+    energies = (context *  self.contexts.view(B, tm_size, H))
+    #print(self.contexts.size())
+    #print("energies", energies)
+    #print("M", self.M)
+    #energies = (self.M * energies)
+    energies = energies.contiguous().sum(dim=2)
+    energies = torch.nn.Softmax(dim=1)(energies)
+    hidden = (energies.view(B, -1, 1, 1) * self.hiddens).sum(dim=1)
+#     output = (energies.view(B, -1, 1, 1) * self.outputs).sum(dim=1)
+    return hidden.permute(1,0,2) #, output
   def cuda(self):
     self.is_cuda = True
 

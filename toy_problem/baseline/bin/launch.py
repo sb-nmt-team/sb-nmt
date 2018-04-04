@@ -38,11 +38,11 @@ def main():
   dataset_name = "../../preprocessed/he-en/"
   logging_dir = "../../trained_models"
   experiment_name = "experiment"
-  fraction = 100
+  fraction = 8
   dataset, src, tgt = read_problem(dataset_name, n_sents=None)
   dataset_size = len(dataset["train"][0])
   n_sents = dataset_size // fraction
-  # n_sents = 100
+  #n_sents = 100
 
   dataset, src, tgt = read_problem(dataset_name, n_sents=n_sents)
 
