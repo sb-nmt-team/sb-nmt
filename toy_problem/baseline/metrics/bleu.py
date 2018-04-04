@@ -24,6 +24,10 @@ import collections
 import math
 import sys
 
+
+VOWELS = {"a", "e", "i", "o", "u"}
+
+
 def _get_ngrams(segment, max_order):
     """Extracts all n-grams upto a given maximum order from an input segment.
     Args:
@@ -106,16 +110,29 @@ def compute_bleu(reference_corpus, translation_corpus, max_order=4,
 
     return (bleu, precisions, bp, ratio, translation_length, reference_length)
 
+
 def read_corpus_from_lines(lines, source=False):
   return list(map(lambda x: [x.split()] if source else x.split(), lines))  
 
+
 def read_corpus(file, source=False):
   return read_corpus_from_lines(file.readlines(), source)
+
 
 def bleu_from_lines(truth_lines, trans_lines):
   reference_corpus = read_corpus_from_lines(truth_lines, True)
   translation_corpus = read_corpus_from_lines(trans_lines)
   return compute_bleu(reference_corpus, translation_corpus)[0]
+
+
+def extract_vowels(line):
+  line = line.split()
+  return ' '.join(filter(lambda x: x.lower() in VOWELS, line))
+
+
+def vowel_bleu_from_lines(truth_lines, trans_lines):
+  return bleu_from_lines(list(map(extract_vowels, truth_lines)), list(map(extract_vowels, trans_lines)))
+
 
 def main():
   with open(sys.argv[1]) as truth_file, open(sys.argv[2]) as trans_file:
