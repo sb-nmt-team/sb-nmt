@@ -43,10 +43,12 @@ class Trainer:
     pass
 
   def validate(self):
+    self.model.eval()
     test_data = self.batch_sampler.dev[0]
     translation = run_translation(self.batch_sampler.get_src(), self.model, test_data,
                                        self.training_hps)
     real_translation = [' '.join(x) for x in self.batch_sampler.dev[1]]
+    self.model.train()
     return {
       "bleu": bleu_from_lines(real_translation, translation),
       "vowel-bleu": vowel_bleu_from_lines(real_translation, translation)
@@ -67,6 +69,7 @@ class Trainer:
 
     self.model.train()
 
+
     # todo multiple optimizers
     optimizer = torch.optim.Adam(self.model.parameters(), lr=self.training_hps.starting_learning_rate)
 
@@ -78,6 +81,7 @@ class Trainer:
 
       for batch_id, ((input, input_mask), (output, output_mask)) in \
         tqdm.tqdm(enumerate(self.batch_sampler), total=len(self.batch_sampler)):
+        self.model.train()
         if self.training_hps.use_cuda:
           input = input.cuda()
           input_mask = input_mask.cuda()
@@ -112,13 +116,11 @@ class Trainer:
       if self.training_hps.use_cuda:
         torch.cuda.empty_cache()
 
-      self.model.eval()
       self.update_metrics(self.validate())
 
       print("After epoch ", epoch_id)
       self.print_metrics()
 
-      self.model.train()
 
       # todo redo the saving
       torch.save(self.model.state_dict(), os.path.join(self.result_dir, "last_state.ckpt"))
@@ -129,6 +131,7 @@ class Trainer:
     
     #print(list(itertools.chain.from_iterable((self.model.parameters(), self.model.translationmemory.parameters()))))
     optimizer = torch.optim.Adam(itertools.chain.from_iterable((self.model.parameters(), self.model.translationmemory.parameters())), lr=self.training_hps.starting_learning_rate)
+    print("Starting using search")
     for epoch_id in range(self.training_hps.n_tm_epochs):
 
       for batch_id, ((input, input_mask), (output, output_mask)) in \
@@ -167,12 +170,10 @@ class Trainer:
       if self.training_hps.use_cuda:
         torch.cuda.empty_cache()
 
-      self.model.eval()
-      self.bleu.append(self.validate())
+      self.update_metrics(self.validate())
 
-      print("After epoch ", epoch_id)
-      print("Bleu: ", self.bleu[-1])
-      self.model.train()
+      print("Search based: After epoch ", epoch_id)
+      self.print_metrics()
 
       # todo redo the saving
       torch.save(self.model.state_dict(), os.path.join(self.result_dir, "last_state.ckpt"))

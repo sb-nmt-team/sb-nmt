@@ -106,6 +106,20 @@ class Seq2Seq(nn.Module):
       contexts[:, i, :] = context
 
     return contexts, hiddens
+
+  def state_dict(self, destination=None, prefix='', keep_vars=False):
+    destination = super(Seq2Seq, self).state_dict(destination, prefix, keep_vars)
+    
+    self.translationmemory.state_dict(destination, prefix, keep_vars)
+
+    return destination
+
+  def load_state_dict(self, state_dict, strict=True):
+    self.translationmemory.load_state_dict(state_dict)
+    #del state_dict['translation_memory.M']
+    super(Seq2Seq, self).load_state_dict(state_dict, strict)
+
+    
   
   def cuda(self):
     self.translationmemory = self.translationmemory.cuda()

@@ -15,7 +15,7 @@ import os
 
 def main():
   print(sys.executable)
-  os.environ['CUDA_VISIBLE_DEVICES'] = "5"
+  os.environ['CUDA_VISIBLE_DEVICES'] = "1"
   print("Running on device ", torch.cuda.current_device())
   parser = argparse.ArgumentParser()
   parser.add_argument('--params')
@@ -42,7 +42,7 @@ def main():
   dataset, src, tgt = read_problem(dataset_name, n_sents=None)
   dataset_size = len(dataset["train"][0])
   n_sents = dataset_size // fraction
-  #n_sents = 100
+  #n_sents = 256
 
   dataset, src, tgt = read_problem(dataset_name, n_sents=n_sents)
 

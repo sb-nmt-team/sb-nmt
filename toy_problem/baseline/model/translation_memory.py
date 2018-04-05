@@ -82,6 +82,32 @@ class TranslationMemory(object):
   def parameters(self):
     #return []
     yield self.M
+ 
+  def state_dict(self, destination=None, prefix='', keep_vars=False):
+    if not keep_vars:
+        M = self.M.clone().data
+    else:
+        M = self.M
+    
+
+
+    name = prefix + "translation_memory." + "M"
+    
+    if destination is None:
+        destination = {}
+    
+    destination[name] = M
+
+    return destination
+
+  def load_state_dict(self, state_dict, strict=True):
+    name = list(self.state_dict().keys())[0]
+
+    M = state_dict[name]
+    self.M = Variable(M, requires_grad=False) 
+
+
+
     """
   def match(self, context):
     '''
@@ -115,6 +141,9 @@ class TranslationMemory(object):
     #energies = (self.M * energies)
     energies = energies.contiguous().sum(dim=2)
     energies = torch.nn.Softmax(dim=1)(energies)
+
+    #print("Energies")
+    #print(energies)
     hidden = (energies.view(B, -1, 1, 1) * self.hiddens).sum(dim=1)
 #     output = (energies.view(B, -1, 1, 1) * self.outputs).sum(dim=1)
     return hidden.permute(1,0,2) #, output
