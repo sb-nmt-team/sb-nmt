@@ -9,8 +9,14 @@ from model import s2s
 from utils.trainer import Trainer
 from data.lang import read_problem
 from data.batcher import BatchSampler
+import torch
+import os
+
 
 def main():
+  print(sys.executable)
+  os.environ['CUDA_VISIBLE_DEVICES'] = "5"
+  print("Running on device ", torch.cuda.current_device())
   parser = argparse.ArgumentParser()
   parser.add_argument('--params')
   parser.add_argument('--training_params')
@@ -33,11 +39,10 @@ def main():
   logging_dir = "../../trained_models"
   experiment_name = "experiment"
   fraction = 8
-
   dataset, src, tgt = read_problem(dataset_name, n_sents=None)
   dataset_size = len(dataset["train"][0])
   n_sents = dataset_size // fraction
-  # n_sents = 100
+  #n_sents = 100
 
   dataset, src, tgt = read_problem(dataset_name, n_sents=n_sents)
 
@@ -58,7 +63,6 @@ def main():
   #   "dev": (["'a 'a d y r", "'a 'a h b ckh"], ["a a d i r", "e a h a v k h a"])
   # }
   # print(dataset["train"][0])
-
   batch_sampler = BatchSampler(dataset, src, tgt, training_params.batch_size)
 
   model = s2s.Seq2Seq(src, tgt, hps, training_params)

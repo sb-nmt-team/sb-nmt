@@ -28,8 +28,11 @@ class DecoderRNN(nn.Module):
                       bidirectional=self.hps.dec_bidirectional)
 
     self.out = nn.Linear(self.hps.dec_hidden_size * self.num_directions, output_size)
+    self.retrieval_gate = nn.Linear(self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1) + \
+                                 self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1) +\
+                                 self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1), 1)
 
-  def forward(self, input, encoder_outputs, mask, hidden=None):
+  def forward(self, input, encoder_outputs, mask, hidden=None, translationmemory=None):
     """
         input: [B,]
         encoder_outputs: [B, T, HE]
@@ -39,14 +42,28 @@ class DecoderRNN(nn.Module):
     if hidden is None:
       hidden = self.init_hidden(batch_size)
     embedded = self.embedding(input)
-    context = self.attn(hidden, encoder_outputs, mask).view(batch_size, -1)
+    context = self.attn(hidden, encoder_outputs, mask)
+    assert context.shape[0] == batch_size, len(context.shape) == 2
+    if translationmemory is not None: # calculate scores q
+      hidden_state_from_memory = translationmemory.match(context)
+      #print(context.size(), hidden_state_from_memory.size())
+
+      retrieval_gate_input = torch.cat((hidden.permute(1, 0, 2).contiguous().view(batch_size, -1),\
+                                        hidden_state_from_memory.permute(1, 0, 2).contiguous().view(batch_size, -1),\
+                                        context.contiguous().view(batch_size, -1)), 1)
+      retrieval_gate = torch.sigmoid(self.retrieval_gate(retrieval_gate_input))
+      #print("RG", retrieval_gate)
+    if translationmemory is not None:
+      hidden = retrieval_gate * hidden + (1 - retrieval_gate) * hidden_state_from_memory
     rnn_input = torch.cat((embedded, context), -1).view(batch_size, 1, -1)
 
     output, next_hidden = self.gru(rnn_input, hidden)
     output = self.out(output).view(batch_size, self.output_size)
     output = F.log_softmax(output, -1)
+#     if search_engine is not None:
+#       output = retrivial_gate * output + (1 - retrivial_gate) * output_from_memory
 
-    return output, next_hidden
+    return output, next_hidden, context
 
   def init_hidden(self, batch_size):
     result = Variable(torch.zeros(self.hps.dec_layers * self.num_directions,

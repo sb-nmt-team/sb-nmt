@@ -21,7 +21,7 @@ def run_translation(src, model, test_data, params):
   for pos in range(0, test_data.shape[0], batch_size):
     x, x_mask = src.convert_batch(test_data[pos:pos + batch_size])
     batch, mask = for_translation(x, x_mask, params)
-    translated = model.translate(batch, mask)
+    translated = model.translate(batch, mask, use_search=params.use_tm_on_test)
     result.extend(translated)
 
   real_result = []
