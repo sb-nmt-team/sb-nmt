@@ -5,7 +5,7 @@ from torch.autograd import Variable
 
 import gc
 
-from metrics.bleu import bleu_from_lines
+from metrics.bleu import bleu_from_lines, vowel_bleu_from_lines
 from utils.hparams import HParams
 from utils.translation_utils import run_translation
 # fix it
@@ -29,8 +29,10 @@ class Trainer:
     self.batch_sampler = batch_sampler
     self.losses = []
 
-    # may be create multiple metrics, not only bleu
-    self.bleu = []
+    self.metrics = {
+      "bleu": [],
+      "vowel-bleu": []
+    }
 
     with open(os.path.join(self.result_dir, "trainer.meta"), "w") as f:
       f.write(repr(self.model) + "\n")
@@ -40,13 +42,24 @@ class Trainer:
   def reset(self):
     pass
 
-
   def validate(self):
     test_data = self.batch_sampler.dev[0]
     translation = run_translation(self.batch_sampler.get_src(), self.model, test_data,
                                        self.training_hps)
     real_translation = [' '.join(x) for x in self.batch_sampler.dev[1]]
-    return bleu_from_lines(real_translation, translation)
+    return {
+      "bleu": bleu_from_lines(real_translation, translation),
+      "vowel-bleu": vowel_bleu_from_lines(real_translation, translation)
+    }
+
+  def update_metrics(self, update):
+    for metric in self.metrics:
+      if metric in update:
+        self.metrics[metric].append(update[metric])
+
+  def print_metrics(self):
+    for metric in self.metrics:
+      print("{0}: {1}".format(metric, self.metrics[metric][-1]))
 
   def train(self):
     # plt.ion()
@@ -100,10 +113,11 @@ class Trainer:
         torch.cuda.empty_cache()
 
       self.model.eval()
-      self.bleu.append(self.validate())
+      self.update_metrics(self.validate())
 
       print("After epoch ", epoch_id)
-      print("Bleu: ", self.bleu[-1])
+      self.print_metrics()
+
       self.model.train()
 
       # todo redo the saving
