@@ -163,6 +163,7 @@ class TranslationMemory(object):
   def get_default_hparams():
     return HParams(
       tm_init = False,
+      tm_overfitted = False,
       tm_bin_path = "../search_engine/se.bin",
       tm_top_size = 3,
       tm_train_dataset_path = "../../preprocessed/he-en/"

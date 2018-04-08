@@ -9,6 +9,7 @@ from model import s2s
 from utils.trainer import Trainer
 from data.lang import read_problem
 from data.batcher import BatchSampler
+from search_engine import SearchEngine, OverfittedSearchEngine
 import torch
 import os
 
@@ -16,7 +17,8 @@ import os
 def main():
   print(sys.executable)
   os.environ['CUDA_VISIBLE_DEVICES'] = "1"
-  print("Running on device ", torch.cuda.current_device())
+  if torch.cuda.is_available():
+    print("Running on device ", torch.cuda.current_device())
   parser = argparse.ArgumentParser()
   parser.add_argument('--params')
   parser.add_argument('--training_params')
@@ -39,8 +41,8 @@ def main():
   logging_dir = "../../trained_models"
   experiment_name = "experiment"
   fraction = 8
-  dataset, src, tgt = read_problem(dataset_name, n_sents=None)
-  dataset_size = len(dataset["train"][0])
+  full_dataset, src, tgt = read_problem(dataset_name, n_sents=None)
+  dataset_size = len(full_dataset["train"][0])
   n_sents = dataset_size // fraction
   #n_sents = 256
 
@@ -65,9 +67,19 @@ def main():
   # print(dataset["train"][0])
   batch_sampler = BatchSampler(dataset, src, tgt, training_params.batch_size)
 
+  searchengine = None
+  if hps.tm_init:
+    if hps.tm_overfitted:
+      searchengine = OverfittedSearchEngine()
+    else:
+      searchengine = SearchEngine()
+    searchengine.load(hps.tm_bin_path)
+    searchengine.set_dictionary(full_dataset)
+    print("Using searchengine: {}".format(searchengine.__class__))
+
   model = s2s.Seq2Seq(src, tgt, hps, training_params)
 
-  trainer = Trainer(model, batch_sampler, hps, training_params)
+  trainer = Trainer(model, batch_sampler, hps, training_params, searchengine)
   trainer.train()
 
 if __name__ == '__main__':
