@@ -1,6 +1,8 @@
 import os
 import numpy as np
+from utils.hparams import HParams
 from collections import defaultdict
+from utils.launch_utils import log_func
 
 PAD_TOKEN = 0
 BOS_TOKEN = 1
@@ -10,10 +12,12 @@ SPECIAL_TOKENS = 4
 OCCURING_SPECIAL_TOKENS = 1
 
 
+@log_func
 def read_file(filename):
     with open(filename) as file:
         return list(map(lambda s: s.strip().split(" "), file.readlines()))
 
+@log_func
 def read_problem(path, n_sents=None):
   modes = ["train", "dev", "test"]
   file_template = "{}.{}.txt"
@@ -43,6 +47,7 @@ def read_problem(path, n_sents=None):
 
 
 class Lang:
+  @log_func
   def __init__(self, tokens_file_path):
     self.idx2word = defaultdict(lambda: "<NAN/>")
     self.word2idx = defaultdict(lambda: NAN_TOKEN)
@@ -71,6 +76,7 @@ class Lang:
     else:
       return [BOS_TOKEN] + list(map(lambda word: self.word2idx[word], sentence)) + [EOS_TOKEN]
 
+  @log_func
   def convert_batch(self, sents):
 
     batch_max_length = 0
@@ -99,3 +105,10 @@ class Lang:
 
   def get_eos(self):
     return EOS_TOKEN
+
+  @staticmethod
+  def get_default_hparams():
+    return HParams(
+      dataset="he-en",
+      fraction=1
+    )
