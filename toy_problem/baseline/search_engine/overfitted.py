@@ -1,6 +1,7 @@
 from search_engine.searchengine import SearchEngine
+from utils.launch_utils import log_func
 
-
+@log_func
 class OverfittedSearchEngine(SearchEngine):
   def __init__(self):
     super().__init__()

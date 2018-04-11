@@ -6,11 +6,13 @@ from torch.autograd import Variable
 
 from data import lang
 from utils.hparams import merge_hparams
+from utils.launch_utils import log_func
 from model.encoder import EncoderRNN
 from model.decoder import DecoderRNN
 from model.translation_memory import TranslationMemory
 
 class Seq2Seq(nn.Module):
+  @log_func
   def __init__(self, source_lang, target_lang, hps, training_hps, searchengine=None):
     super(Seq2Seq, self).__init__()
     self.hps = hps
@@ -28,6 +30,7 @@ class Seq2Seq(nn.Module):
     else:
       self.translationmemory = None
 
+  @log_func
   def translate(self, input_batch, mask, use_search=False):
     batch_size = input_batch.size()[0]
     encoder_outputs = self.encoder(input_batch)
@@ -66,6 +69,7 @@ class Seq2Seq(nn.Module):
         break
     return [' '.join(map(self.target_lang.get_word, elem)) for elem in translations]
 
+  @log_func
   def forward(self, input_batch, mask, output_batch, out_mask, use_search=False):
     encoder_outputs = self.encoder(input_batch)
 
@@ -86,7 +90,8 @@ class Seq2Seq(nn.Module):
 
     loss /= out_mask.sum()
     return loss
-  
+
+  @log_func
   def get_hiddens_and_contexts(self, input_batch, mask, output_batch, out_mask):
     encoder_outputs = self.encoder(input_batch)
     B, *_ = input_batch.shape
@@ -109,8 +114,8 @@ class Seq2Seq(nn.Module):
 
   def state_dict(self, destination=None, prefix='', keep_vars=False):
     destination = super(Seq2Seq, self).state_dict(destination, prefix, keep_vars)
-    
-    self.translationmemory.state_dict(destination, prefix, keep_vars)
+    if self.translationmemory:
+      self.translationmemory.state_dict(destination, prefix, keep_vars)
 
     return destination
 
@@ -119,10 +124,9 @@ class Seq2Seq(nn.Module):
     #del state_dict['translation_memory.M']
     super(Seq2Seq, self).load_state_dict(state_dict, strict)
 
-    
-  
   def cuda(self):
-    self.translationmemory = self.translationmemory.cuda()
+    if self.translationmemory:
+      self.translationmemory = self.translationmemory.cuda()
     self.encoder = self.encoder.cuda()
     self.decoder = self.decoder.cuda()
     return super(Seq2Seq, self).cuda()
@@ -135,5 +139,8 @@ class Seq2Seq(nn.Module):
 
   @staticmethod
   def get_default_hparams():
-    return merge_hparams(EncoderRNN.get_default_hparams(), DecoderRNN.get_default_hparams(),\
-                         TranslationMemory.get_default_hparams())
+    return merge_hparams(EncoderRNN.get_default_hparams(),
+                         DecoderRNN.get_default_hparams(),
+                         TranslationMemory.get_default_hparams(),
+                         lang.Lang.get_default_hparams()
+                         )

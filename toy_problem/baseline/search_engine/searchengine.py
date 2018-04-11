@@ -1,14 +1,17 @@
 import pickle
 import sys
 from .utils import find_closest
+from utils.launch_utils import log_func
 
 class SearchEngine(object):
+  @log_func
   def __init__(self):
     self.dataset = []
     self.nn_map = {}
     self.n_neighbours = None
     self.dictionary = {}
 
+  @log_func
   def load(self, path):
     with open(path, "rb") as file:
       content = pickle.load(file)
@@ -46,6 +49,7 @@ class SearchEngine(object):
         self.dictionary[self.sentence_to_tuple(src_sent)] = \
           self.sentence_to_tuple(tgt_sent)
 
+  @log_func
   def add_translation(self, result):
     if not all([sentence in self.dictionary for _, sentence in result]):
       print("Not all sentences have translation in dictionary, " +
@@ -55,6 +59,7 @@ class SearchEngine(object):
     return [(score, sentence, self.dictionary[sentence])
             for score, sentence in result]
 
+  @log_func
   def __call__(self, sentence, n_neighbours=None, translation=False):
     """
     for translation=True to work, set_dictionary must have been called
