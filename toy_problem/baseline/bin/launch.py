@@ -77,9 +77,9 @@ def main():
     searchengine.set_dictionary(full_dataset)
     print("Using searchengine: {}".format(searchengine.__class__))
 
-  model = s2s.Seq2Seq(src, tgt, hps, training_params)
+  model = s2s.Seq2Seq(src, tgt, hps, training_params, searchengine)
 
-  trainer = Trainer(model, batch_sampler, hps, training_params, searchengine)
+  trainer = Trainer(model, batch_sampler, hps, training_params)
   trainer.train()
 
 if __name__ == '__main__':
