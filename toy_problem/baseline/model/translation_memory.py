@@ -83,7 +83,13 @@ class TranslationMemory(object):
                                      self.hps.enc_layers * (self.hps.enc_bidirectional + 1) *\
                                      self.hps.enc_hidden_size)
 #     output_mask = output_mask.view(batch_size, -1)
-    
+    batch_size_, top_size_, max_output_length = search_outputs.view(batch_size, self.top_size, -1).shape
+    assert batch_size == batch_size_
+    assert top_size_ == self.top_size
+    search_outputs_ohe = Variable(torch.FloatTensor(batch_size, self.top_size, max_output_length, self.target_lang.output_size()))
+    search_outputs_ohe.zero_()
+    search_outputs_ohe.scatter_(3, search_outputs.view(batch_size, self.top_size, max_output_length, 1), 1)
+    self.outputs_exp = search_outputs_ohe[:, :, :-1, :].contiguous()
 #     search_inputs = search_inputs.view(batch_size, self.top_size, -1)
 #     search_outputs = search_outputs.view(batch_size, self.top_size, -1)
 #     return search_inputs, input_mask, search_outputs, output_mask
@@ -163,8 +169,8 @@ class TranslationMemory(object):
     #print("Energies")
     #print(energies)
     hidden = (energies.view(B, -1, 1, 1) * self.hiddens).sum(dim=1)
-#     output = (energies.view(B, -1, 1, 1) * self.outputs).sum(dim=1)
-    return hidden.permute(1,0,2) #, output
+    output_exp = (energies.view(B, -1, 1) * self.outputs_exp.view(B, -1, self.target_lang.output_size())).sum(dim=1)
+    return hidden.permute(1,0,2) , output_exp
 
   @log_func
   def cuda(self):

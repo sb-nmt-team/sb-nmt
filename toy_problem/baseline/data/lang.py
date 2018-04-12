@@ -95,7 +95,7 @@ class Lang:
     return result, mask
 
   def input_size(self):
-    return len(self.idx2word.keys())
+    return len(self.word2idx.keys())
 
   def output_size(self):
     return len(self.idx2word.keys())
