@@ -39,7 +39,7 @@ class HParams(object):
     """
     hps = HParams(**self._items)
     for key, value in six.iteritems(d):
-      assert(key in self._items)
+      assert key in self._items, key
       hps.set(key, value)
     return hps
 
