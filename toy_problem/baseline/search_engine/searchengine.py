@@ -37,7 +37,9 @@ class SearchEngine(object):
 
   def indexes_to_sentences(self, indexes):
     return [(score, self.dataset[index]) for score, index in indexes]
-
+    #return [(score, self.dataset[index], self.dictionary[self.dataset[index]]) for score, index in indexes]
+   
+  @log_func
   def set_dictionary(self, dataset):
     """
     :param dataset: (result of data.lang.read_problem)[0]
@@ -73,7 +75,10 @@ class SearchEngine(object):
       result = self.nn_map[sentence]
       if n_neighbours:
         result = result[:n_neighbours]
-      return self.indexes_to_sentences(result)
+      result = self.indexes_to_sentences(result)
+      if translation:
+        result = self.add_translation(result)
+      return result
 
     self.not_found_warning(sentence)
 

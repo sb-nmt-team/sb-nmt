@@ -55,7 +55,7 @@ class Trainer:
 
   def print_metrics(self):
     for metric in self.metrics:
-      print("{0}: {1}".format(metric, self.metrics[metric][-1]))
+      translate_to_all_loggers("{0}: {1}".format(metric, self.metrics[metric][-1]))
 
   @log_func
   def train(self):

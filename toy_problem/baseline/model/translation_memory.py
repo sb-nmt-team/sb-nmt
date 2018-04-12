@@ -45,9 +45,11 @@ class TranslationMemory(object):
     input_sentences = input_sentences.clone()
     for sentence in input_sentences.data.cpu().numpy():
       sentence = self.source_lang.convert(sentence, backward=True)
- #     print(sentence)
+     # print(sentence)
       #print(self.searchengine)
       found = self.searchengine(sentence, n_neighbours=self.top_size, translation=True)
+     # print(found)
+     # print("============")
       found_inputs = [x[1] for x in found]
       found_outputs = [x[2] for x in found]
       #found_inputs = [x[1] for x in self.searchengine(sentence, n_neighbours=self.top_size)]

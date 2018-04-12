@@ -52,7 +52,7 @@ class DecoderRNN(nn.Module):
                                         hidden_state_from_memory.permute(1, 0, 2).contiguous().view(batch_size, -1),\
                                         context.contiguous().view(batch_size, -1)), 1)
       retrieval_gate = torch.sigmoid(self.retrieval_gate(retrieval_gate_input))
-      #print("RG", retrieval_gate)
+      print("RG", retrieval_gate.mean())
     if translationmemory is not None:
       hidden = retrieval_gate * hidden + (1 - retrieval_gate) * hidden_state_from_memory
     rnn_input = torch.cat((embedded, context), -1).view(batch_size, 1, -1)
