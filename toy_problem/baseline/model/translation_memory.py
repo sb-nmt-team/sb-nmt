@@ -45,17 +45,17 @@ class TranslationMemory(object):
     input_sentences = input_sentences.clone()
     for sentence in input_sentences.data.cpu().numpy():
       sentence = self.source_lang.convert(sentence, backward=True)
-      print(sentence)
+ #     print(sentence)
       #print(self.searchengine)
       found = self.searchengine(sentence, n_neighbours=self.top_size, translation=True)
       found_inputs = [x[1] for x in found]
       found_outputs = [x[2] for x in found]
       #found_inputs = [x[1] for x in self.searchengine(sentence, n_neighbours=self.top_size)]
-      print(found_inputs)
-      print("===========")
+#      print(found_inputs)
+ #     print("===========")
       getter = lambda s: self.database.get(s, "n o t f o u n d")
       found_outputs = list(map(getter, found_inputs))
-      print(found_outputs)
+#      print(found_outputs)
       assert(len(found_outputs) == self.top_size)
       search_inputs += found_inputs
       search_outputs += found_outputs

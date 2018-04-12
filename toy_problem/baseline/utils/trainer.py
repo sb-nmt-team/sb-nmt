@@ -109,18 +109,23 @@ class Trainer:
 
       self.update_metrics(self.validate())
 
-      translate_to_all_loggers("Epoch ended, after epoch metrics: {}".format(epoch_id))
+      translate_to_all_loggers("Epoch ended, after epoch {} metrics".format(epoch_id))
       self.print_metrics()
 
 
       # todo redo the saving
       torch.save(self.model.state_dict(), os.path.join(self.training_hps.logdir, "last_state.ckpt"))
+
       gc.collect()
       if self.training_hps.use_cuda:
         torch.cuda.empty_cache()
+
+
+
     self.training_hps.use_tm_on_test = True
     if not self.hps.tm_init:
       return
+
     translate_to_all_loggers("Starting the trainer with search database.")
     optimizer = torch.optim.Adam(itertools.chain.from_iterable((self.model.parameters(), self.model.translationmemory.parameters())), lr=self.training_hps.starting_learning_rate)
     # todo copypaste
@@ -158,7 +163,7 @@ class Trainer:
 
       self.update_metrics(self.validate())
 
-      translate_to_all_loggers("Epoch ended, after epoch metrics: {}".format(epoch_id))
+      translate_to_all_loggers("Epoch ended, after epoch {} metrics".format(epoch_id))
       self.print_metrics()
 
       # todo redo the saving
