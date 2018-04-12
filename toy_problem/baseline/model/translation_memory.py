@@ -1,15 +1,20 @@
 from search_engine.searchengine import SearchEngine
 from torch.autograd import Variable
 import torch
+import os
 import numpy as np
 from utils.hparams import HParams
 from torch.nn import Parameter
 import torch.nn as nn
-
+from utils.launch_utils import log_func
 from data.lang import read_problem
 
-class TranslationMemory(object):
+SE_DIR = os.path.join(os.path.abspath(os.path.join(__file__ ,"../../")), "search_engine")
+DATASET_DIR = os.path.join(os.path.abspath(os.path.join(__file__ ,"../../..")), "preprocessed")
 
+
+class TranslationMemory(object):
+  @log_func
   def __init__(self, model, hps, searchengine=None):
     self.is_cuda = False
     self.model = model
@@ -33,7 +38,7 @@ class TranslationMemory(object):
     self.M = Variable(M_inits, requires_grad=True)
     #print("M size", self.M.size())
 
-
+  @log_func
   def fit(self, input_sentences):
     batch_size = len(input_sentences)
     search_inputs, search_outputs = [], []
@@ -89,7 +94,8 @@ class TranslationMemory(object):
   def parameters(self):
     #return []
     yield self.M
- 
+
+  @log_func
   def state_dict(self, destination=None, prefix='', keep_vars=False):
     if not keep_vars:
         M = self.M.clone().data
@@ -107,6 +113,7 @@ class TranslationMemory(object):
 
     return destination
 
+  @log_func
   def load_state_dict(self, state_dict, strict=True):
     name = list(self.state_dict().keys())[0]
 
@@ -132,7 +139,9 @@ class TranslationMemory(object):
     hidden = (energies.view(B, -1, 1, 1) * self.hiddens).sum(dim=1)
 #     output = (energies.view(B, -1, 1, 1) * self.outputs).sum(dim=1)
     return hidden.permute(1,0,2) #, output
-"""
+  """
+
+  @log_func
   def match(self, context):
     '''
     context = Variable(FloatTensor(B, H))
@@ -154,6 +163,8 @@ class TranslationMemory(object):
     hidden = (energies.view(B, -1, 1, 1) * self.hiddens).sum(dim=1)
 #     output = (energies.view(B, -1, 1, 1) * self.outputs).sum(dim=1)
     return hidden.permute(1,0,2) #, output
+
+  @log_func
   def cuda(self):
     self.is_cuda = True
 
@@ -171,7 +182,7 @@ class TranslationMemory(object):
     return HParams(
       tm_init = False,
       tm_overfitted = False,
-      tm_bin_path = "../search_engine/se.bin",
+      tm_bin_path = os.path.join(SE_DIR, "se.bin"),
       tm_top_size = 3,
-      tm_train_dataset_path = "../../preprocessed/he-en/"
+      tm_train_dataset_path = os.path.join(DATASET_DIR, "he-en")
     )

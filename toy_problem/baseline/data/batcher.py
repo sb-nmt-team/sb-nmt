@@ -1,8 +1,11 @@
 import numpy as np
 import torch
 from torch.autograd import Variable
+from utils.launch_utils import log_func
+
 
 class BatchSampler:
+  @log_func
   def __init__(self, dataset, src_lang, tgt_lang, batch_size):
     self.train = np.array(dataset["train"])
     self.dev = np.array(dataset["dev"])
@@ -23,12 +26,15 @@ class BatchSampler:
     self.position = 0
     return self
 
+  @log_func
   def get_src(self):
     return self.src_lang
 
+  @log_func
   def reset(self):
     self.position = 0
 
+  @log_func
   def get_batch(self, x, y):
     x, x_mask = self.src_lang.convert_batch(x)
     y, y_mask = self.tgt_lang.convert_batch(y)

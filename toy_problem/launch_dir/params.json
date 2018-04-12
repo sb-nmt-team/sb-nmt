@@ -1,1 +1,1 @@
-{"tm_init": true,  "tm_top_size":1, "tm_overfitted": true}
+{"dataset": "he-en", "fraction": 2,"tm_init": false,  "tm_top_size": 5}
