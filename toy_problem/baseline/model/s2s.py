@@ -108,10 +108,10 @@ class Seq2Seq(nn.Module):
     for i in range(out_mask.size()[1] - 1):
     #for i in range(out_mask.size()[1]):
       output, hidden, context = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden, verbose=(i<=2))
-      print(hidden.size())
-      print(hiddens.size())
-      print(hiddens[:, i, :].size())
-      print(B)
+      print("Hidden size", hidden.size())
+      print("Hiddens size", hiddens.size())
+      print("Sentence size", hiddens[:, i, :].size())
+      print("Batch shape", B)
       print("_"*10)
       print(input_batch.shape)
       hidden_ = hidden.permute(1, 0, 2).contiguous().view(B, -1)
@@ -123,6 +123,8 @@ class Seq2Seq(nn.Module):
       assert hiddens[:, i, :].size() == hidden_.size()
       assert contexts[:, i, :].size() == context.size()
       hiddens[:, i, :] = hidden_.clone()
+      print("Hidden_ size", hidden_.size())
+      print("Hiddens size", hiddens.size())
       contexts[:, i, :] = context.clone()
     print("BBBBB: ", contexts[0, 0:2, :10])
     return hiddens, contexts
