@@ -43,9 +43,13 @@ class TranslationMemory(object):
     batch_size = len(input_sentences)
     search_inputs, search_outputs = [], []
     input_sentences = input_sentences.clone()
-    for sentence in input_sentences.data.cpu().numpy():
+    for sentence_num, sentence in enumerate(input_sentences.data.cpu().numpy()):
+      if sentence_num == 0:
+        print(sentence)
       sentence = self.source_lang.convert(sentence, backward=True)
-     # print(sentence)
+      if sentence_num == 0:
+        print(self.source_lang.convert(sentence))
+      #print(sentence)
       #print(self.searchengine)
       found = self.searchengine(sentence, n_neighbours=self.top_size, translation=True)
      # print(found)
@@ -53,16 +57,21 @@ class TranslationMemory(object):
       found_inputs = [x[1] for x in found]
       found_outputs = [x[2] for x in found]
       #found_inputs = [x[1] for x in self.searchengine(sentence, n_neighbours=self.top_size)]
-#      print(found_inputs)
- #     print("===========")
-      getter = lambda s: self.database.get(s, "n o t f o u n d")
-      found_outputs = list(map(getter, found_inputs))
-#      print(found_outputs)
+      if sentence_num == 0:
+        print(sentence)
+        print(found_inputs)
+        print(found_outputs)
+        print("===========")
+        getter = lambda s: self.database.get(s, "n o t f o u n d")
+        found_outputs = list(map(getter, found_inputs))
+        print(found_outputs)
+        print("%%%%%%%")
       assert(len(found_outputs) == self.top_size)
       search_inputs += found_inputs
       search_outputs += found_outputs
-
+    #print(search_inputs[0])
     search_inputs, input_mask = self.source_lang.convert_batch(search_inputs)
+    #print(search_inputs[0])
     search_inputs = Variable(torch.from_numpy(search_inputs.astype(np.int64))).contiguous()
     input_mask = Variable(torch.from_numpy(input_mask.astype(np.float32))).contiguous()
     search_outputs, output_mask = self.target_lang.convert_batch(search_outputs)
@@ -75,13 +84,16 @@ class TranslationMemory(object):
         output_mask = output_mask.cuda()
 
     self.hiddens, self.contexts = self.model.get_hiddens_and_contexts(search_inputs, input_mask, search_outputs, output_mask)
+    #print("Hiddens, contexts", self.hiddens.size(), self.contexts.size())
     self.hiddens = self.hiddens.view(batch_size, -1,\
                                      self.hps.dec_layers * (self.hps.dec_bidirectional + 1),\
                                      self.hps.dec_hidden_size)
 #     input_mask = input_mask.view(batch_size, -1)
+    #print(self.contexts[0, 0:3, :10])
     self.contexts = self.contexts.view(batch_size, -1,\
                                      self.hps.enc_layers * (self.hps.enc_bidirectional + 1) *\
                                      self.hps.enc_hidden_size)
+    #print(self.contexts[0, 0:3, :10])
 #     output_mask = output_mask.view(batch_size, -1)
     
 #     search_inputs = search_inputs.view(batch_size, self.top_size, -1)
@@ -89,6 +101,7 @@ class TranslationMemory(object):
 #     return search_inputs, input_mask, search_outputs, output_mask
     self.contexts = self.contexts.detach()
     self.hiddens = self.hiddens.detach()
+    self.output_mask = output_mask[:, :-1]
     if self.is_cuda:
         self.contexts = self.contexts.cuda()
         self.hiddens = self.hiddens.cuda()
@@ -144,24 +157,39 @@ class TranslationMemory(object):
   """
 
   @log_func
-  def match(self, context):
+  def match(self, context, verbose=False):
     '''
     context = Variable(FloatTensor(B, H))
     '''
+    ppring = print
+    pprint = lambda *args, **kwargs: ppring(*args, **kwargs) if verbose else None
     B, tm_size, H = self.contexts.shape
     #print(self.M.size(), context.size())
     context = context.matmul(self.M)
+    pprint(context.view(B, 1, H)[0, 0, :10])
+    pprint(self.contexts.view(B, tm_size, H)[0, 0:2, :10])
+    #assert False
     context = context.contiguous().view(B, 1, H).contiguous()
     energies = (context *  self.contexts.view(B, tm_size, H))
     #print(self.contexts.size())
-    #print("energies", energies)
+    pprint("output_mask", self.output_mask.size())
+    #print(self.output_mask)
     #print("M", self.M)
     #energies = (self.M * energies)
     energies = energies.contiguous().sum(dim=2)
     energies = torch.nn.Softmax(dim=1)(energies)
-
-    #print("Energies")
-    #print(energies)
+    pprint("energies", energies.size())
+    energies = energies * self.output_mask
+    if verbose:
+      pprint(energies)
+    normalizer = energies.sum(dim=1).unsqueeze(1)
+    energies /= normalizer
+    if verbose:
+      pprint("-----")
+      pprint(energies)
+    pprint("Energies")
+    #print(energies.max(dim=1))
+    pprint(self.hiddens.size())
     hidden = (energies.view(B, -1, 1, 1) * self.hiddens).sum(dim=1)
 #     output = (energies.view(B, -1, 1, 1) * self.outputs).sum(dim=1)
     return hidden.permute(1,0,2) #, output

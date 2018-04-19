@@ -32,7 +32,7 @@ class DecoderRNN(nn.Module):
                                  self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1) +\
                                  self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1), 1)
 
-  def forward(self, input, encoder_outputs, mask, hidden=None, translationmemory=None):
+  def forward(self, input, encoder_outputs, mask, hidden=None, translationmemory=None, verbose=False):
     """
         input: [B,]
         encoder_outputs: [B, T, HE]
@@ -43,9 +43,13 @@ class DecoderRNN(nn.Module):
       hidden = self.init_hidden(batch_size)
     embedded = self.embedding(input)
     context = self.attn(hidden, encoder_outputs, mask)
+    if verbose:
+      #print(mask.sum(dim=1)[:10])
+      print(hidden[:, 0:1, :7])
+      print(context[0:1, :7])
     assert context.shape[0] == batch_size, len(context.shape) == 2
     if translationmemory is not None: # calculate scores q
-      hidden_state_from_memory = translationmemory.match(context)
+      hidden_state_from_memory = translationmemory.match(context, verbose=verbose)
       #print(context.size(), hidden_state_from_memory.size())
 
       retrieval_gate_input = torch.cat((hidden.permute(1, 0, 2).contiguous().view(batch_size, -1),\
@@ -53,7 +57,14 @@ class DecoderRNN(nn.Module):
                                         context.contiguous().view(batch_size, -1)), 1)
       retrieval_gate = torch.sigmoid(self.retrieval_gate(retrieval_gate_input))
       print("RG", retrieval_gate.mean())
+      print(retrieval_gate.size())
     if translationmemory is not None:
+      print("Hidden", hidden.size())
+      print("memory", hidden_state_from_memory.size())
+      tmp =  retrieval_gate * hidden
+      print(tmp.size())
+      diff = torch.abs(hidden - hidden_state_from_memory).max()
+      print("diff", diff)
       hidden = retrieval_gate * hidden + (1 - retrieval_gate) * hidden_state_from_memory
     rnn_input = torch.cat((embedded, context), -1).view(batch_size, 1, -1)
 

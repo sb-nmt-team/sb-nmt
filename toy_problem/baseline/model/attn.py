@@ -33,16 +33,26 @@ class Attn(nn.Module):
     '''
     batch_size = encoder_outputs.size(0)
     max_len = encoder_outputs.size(1)
-
+    print("H: ", hidden[:, 0:1, :10])
     hidden = hidden.transpose(0, 1).contiguous()  # [B, l * d, HD]
     hidden = hidden.view(batch_size, -1)  # [B, HD * layers * directions]
     hidden = hidden.repeat(max_len, 1, 1).transpose(0, 1)  # [B, T, HD * layers * directions]
-
+    energies_input = torch.cat((hidden, encoder_outputs), -1)
+    print("EI: ", energies_input.size())
+    print("EI: ", energies_input[0, :3, :10])
     energies = self.attn(torch.cat((hidden, encoder_outputs), -1)).view(batch_size, max_len)  # [B, T, 1]
-
+    print("EE: ", energies[0:1, :10])
+    print("MA: ", mask.sum(1).view(-1, 1)[:10, :])
+    print(energies.size(), mask.size())
     energies = energies * mask
-    energies = F.softmax(energies, dim=-1)
+    print("EM: ", energies[0:1, :10])
+    #energies = F.softmax(energies, dim=-1)
+    #print('FU:', energies.sum(1))
+    #0.0053  0.0397  0.0337  0.0665  0.1006  0.0721  0.1052  0.0529  0.0719  0.1305
+    energies = torch.nn.Softmax(dim=1)(energies)
     energies = energies * mask
+    print("E!: ", energies[0:1, :10])
+    #print(energies.sum(-1).view(-1, 1))
     energies = energies / energies.sum(1).view(-1, 1)  # [B, T]
-
+    print("E:", energies[0:1, :10])
     return (energies.view(batch_size, max_len, 1) * encoder_outputs).sum(1)  # [B, HE]

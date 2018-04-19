@@ -72,7 +72,7 @@ class Seq2Seq(nn.Module):
   @log_func
   def forward(self, input_batch, mask, output_batch, out_mask, use_search=False):
     encoder_outputs = self.encoder(input_batch)
-
+    print("US: ", use_search)
     if use_search:
       assert self.translationmemory is not None, "No sample pairs for translation memory, did you want it?"
       self.translationmemory.fit(input_batch)
@@ -83,7 +83,7 @@ class Seq2Seq(nn.Module):
     for i in range(out_mask.size()[1] - 1):
       if use_search:
         output, hidden, _ = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden,\
-                                         translationmemory=self.translationmemory)
+                                         translationmemory=self.translationmemory, verbose = (i==0))
       else:
         output, hidden, _ = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden)
       loss += (self.criterion(output, output_batch[:, i + 1]) * out_mask[:, i + 1]).sum()
@@ -99,18 +99,33 @@ class Seq2Seq(nn.Module):
 
     loss = 0.0
     hiddens = Variable(torch.zeros((B, out_mask.size()[1] - 1,\
-                                 self.hps.dec_layers * (self.hps.dec_bidirectional + 1) *\
+                                 self.hps.dec_layers * (self.hps.dec_bidirectional + 1) * \
                                  self.hps.dec_hidden_size)))
     contexts = Variable(torch.zeros((B, out_mask.size()[1] - 1,\
                                  self.hps.enc_layers * (self.hps.enc_bidirectional + 1) *\
                                  self.hps.enc_hidden_size)))
     
     for i in range(out_mask.size()[1] - 1):
-      output, hidden, context = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden)
-      hiddens[:, i, :] = hidden
-      contexts[:, i, :] = context
-
-    return contexts, hiddens
+    #for i in range(out_mask.size()[1]):
+      output, hidden, context = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden, verbose=(i<=2))
+      print(hidden.size())
+      print(hiddens.size())
+      print(hiddens[:, i, :].size())
+      print(B)
+      print("_"*10)
+      print(input_batch.shape)
+      hidden_ = hidden.permute(1, 0, 2).contiguous().view(B, -1)
+      print(context.size())
+      if i == 0:
+        print(context[0, :10])
+        print("AAAAAAAA")
+      #context = context.permute(1, 0, 2).contiguous().view(B, -1)
+      assert hiddens[:, i, :].size() == hidden_.size()
+      assert contexts[:, i, :].size() == context.size()
+      hiddens[:, i, :] = hidden_.clone()
+      contexts[:, i, :] = context.clone()
+    print("BBBBB: ", contexts[0, 0:2, :10])
+    return hiddens, contexts
 
   def state_dict(self, destination=None, prefix='', keep_vars=False):
     destination = super(Seq2Seq, self).state_dict(destination, prefix, keep_vars)
