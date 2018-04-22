@@ -40,6 +40,7 @@ class SearchEngine(object):
     #return [(score, self.dataset[index], self.dictionary[self.dataset[index]]) for score, index in indexes]
    
   @log_func
+#      print(found_outputs)
   def set_dictionary(self, dataset):
     """
     :param dataset: (result of data.lang.read_problem)[0]

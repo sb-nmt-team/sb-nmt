@@ -4,6 +4,7 @@ from torch.autograd import Variable
 
 from data import lang
 from utils.hparams import HParams
+from utils.debug_utils import assert_shape_equal
 # fix it
 
 
@@ -27,13 +28,22 @@ class EncoderRNN(nn.Module):
 
   def forward(self, input_batch, hidden=None):
     """
+        input_batch: [B, T]
+        hidden: [LE * DE, B, HE]
+        outputs:  [B, T, DE * HE]
     """
-
+    batch_size, T = input_batch.size()
     if hidden is None:
       hidden = self.init_hidden(input_batch.size(0))
-
+    if __debug__:
+        assert_shape_equal(input_batch.size(), torch.Size([batch_size, T]))
+        assert_shape_equal(hidden.size(), torch.Size([self.hps.enc_layers * (int(self.hps.enc_bidirectional) + 1),\
+                                                      batch_size, self.hps.enc_hidden_size]))
     embedded = self.embedding(input_batch).contiguous()
     outputs, _ = self.gru(embedded, hidden)
+    if __debug__:
+        assert_shape_equal(outputs.size(), torch.Size([batch_size, T,\
+                                                      self.hps.enc_hidden_size *  (int(self.hps.enc_bidirectional) + 1)]))
     return outputs
 
   def init_hidden(self, batch_size):

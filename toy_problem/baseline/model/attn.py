@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch import nn
+from utils.debug_utils import  assert_shape_equal
 
 '''
 def get_enc_output_size(self):
@@ -19,18 +20,25 @@ class Attn(nn.Module):
     self.attn = nn.Linear(hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1) + \
                           hps.dec_hidden_size * (int(hps.dec_bidirectional) + 1) * hps.dec_layers,
                           1)
+    self.hps = hps
 
   def forward(self, hidden, encoder_outputs, mask):
     '''
     :param hidden:
-        previous hidden state of the decoder, in shape (layers * directions, B, HD)
+        previous hidden state of the decoder, in shape (LD * DD, B, HD)
     :param encoder_outputs:
-        encoder outputs from Encoder, in shape (B, T, HE)
+        encoder outputs from Encoder, in shape (B, T, HE * DE)
     :param encoder_output_lengths:
         lengths of encoded sentences, in shape (B,)
     :return
-        attention energies in shape (B,T)
+       context vectors in shape (B,HE * DE)
     '''
+    if __debug__:
+      batch_size, T, _ = encoder_outputs.size()
+      assert_shape_equal(hidden.size(), torch.Size([self.hps.dec_layers * (int(self.hps.dec_bidirectional) + 1), \
+                                                    batch_size, self.hps.dec_hidden_size]))
+      assert_shape_equal(encoder_outputs.size(), torch.Size([batch_size, T,\
+                                                             self.hps.enc_hidden_size* (int(self.hps.enc_bidirectional) + 1)]))
     batch_size = encoder_outputs.size(0)
     max_len = encoder_outputs.size(1)
 
@@ -44,5 +52,8 @@ class Attn(nn.Module):
     energies = F.softmax(energies, dim=-1)
     energies = energies * mask
     energies = energies / energies.sum(1).view(-1, 1)  # [B, T]
+    context = (energies.view(batch_size, max_len, 1) * encoder_outputs).sum(1)
+    if __debug__:
+      assert_shape_equal(context.size(), torch.Size([batch_size, self.hps.enc_hidden_size *  (int(self.hps.enc_bidirectional) + 1)]))
 
-    return (energies.view(batch_size, max_len, 1) * encoder_outputs).sum(1)  # [B, HE]
+    return context # [B, HE]

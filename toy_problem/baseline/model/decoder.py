@@ -7,6 +7,7 @@ from torch.autograd import Variable
 from model.attn import Attn
 from data import lang
 from utils.hparams import HParams
+from utils.debug_utils import assert_shape_equal
 
 
 class DecoderRNN(nn.Module):
@@ -29,20 +30,29 @@ class DecoderRNN(nn.Module):
 
     self.out = nn.Linear(self.hps.dec_hidden_size * self.num_directions, output_size)
     self.retrieval_gate = nn.Linear(self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1) + \
-                                 self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1) +\
-                                 self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1), 1)
+                                 self.hps.dec_layers * self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1) +\
+                                 self.hps.dec_layers * self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1), 1)
 
   def forward(self, input, encoder_outputs, mask, hidden=None, translationmemory=None):
     """
         input: [B,]
-        encoder_outputs: [B, T, HE]
-        hidden: [B, layers * directions, HD]
+        encoder_outputs:  [B, T, DE * HE]
+        hidden: [LD * DD, B, HD]
+        output: [B, trg_lang_size]
     """
-    batch_size = input.size(0)
+    batch_size, T, _ = encoder_outputs.size()
     if hidden is None:
       hidden = self.init_hidden(batch_size)
+    if __debug__:
+      assert input.size() == torch.Size([batch_size])
+      assert_shape_equal(hidden.size(), torch.Size([self.hps.dec_layers * (int(self.hps.dec_bidirectional) + 1), batch_size,\
+                                                    self.hps.dec_hidden_size]))
+      assert_shape_equal(encoder_outputs.size(),torch.Size([batch_size, T,\
+                                                            self.hps.enc_hidden_size * (int(self.hps.dec_bidirectional) + 1)]))
     embedded = self.embedding(input)
     context = self.attn(hidden, encoder_outputs, mask)
+    if __debug__:
+      assert_shape_equal(context.shape, torch.Size([batch_size, self.hps.enc_hidden_size *  (int(self.hps.enc_bidirectional) + 1)]))
     assert context.shape[0] == batch_size, len(context.shape) == 2
     if translationmemory is not None: # calculate scores q
       hidden_state_from_memory, output_exp_from_memory = translationmemory.match(context)
@@ -62,7 +72,6 @@ class DecoderRNN(nn.Module):
     output = F.log_softmax(output, -1)
     if translationmemory is not None and self.hps.dec_use_shallow_fusion:
       output = (retrieval_gate * output.clamp(-10, 10).exp() + (1 - retrieval_gate) * output_exp_from_memory).log()
-
 
     return output, next_hidden, context
 

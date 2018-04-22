@@ -7,6 +7,7 @@ from utils.hparams import HParams
 from torch.nn import Parameter
 import torch.nn as nn
 from utils.launch_utils import log_func
+from utils.debug_utils import assert_shape_equal
 from data.lang import read_problem
 
 SE_DIR = os.path.join(os.path.abspath(os.path.join(__file__ ,"../../")), "search_engine")
@@ -33,10 +34,7 @@ class TranslationMemory(object):
     #                   torch.eye(size).view(1, 1, size, size)
     M_inits = torch.randn(size, size) * 0.01 +\
                        torch.eye(size)
-
-    #self.M = Variable(M_inits.cuda(), requires_grad=True)
     self.M = Variable(M_inits, requires_grad=True)
-    #print("M size", self.M.size())
 
   @log_func
   def fit(self, input_sentences):
@@ -45,19 +43,11 @@ class TranslationMemory(object):
     input_sentences = input_sentences.clone()
     for sentence in input_sentences.data.cpu().numpy():
       sentence = self.source_lang.convert(sentence, backward=True)
-     # print(sentence)
-      #print(self.searchengine)
       found = self.searchengine(sentence, n_neighbours=self.top_size, translation=True)
-     # print(found)
-     # print("============")
       found_inputs = [x[1] for x in found]
       found_outputs = [x[2] for x in found]
-      #found_inputs = [x[1] for x in self.searchengine(sentence, n_neighbours=self.top_size)]
-#      print(found_inputs)
- #     print("===========")
-      getter = lambda s: self.database.get(s, "n o t f o u n d")
-      found_outputs = list(map(getter, found_inputs))
-#      print(found_outputs)
+      # getter = lambda s: self.database.get(s, "n o t f o u n d")
+      # found_outputs = list(map(getter, found_inputs))
       assert(len(found_outputs) == self.top_size)
       search_inputs += found_inputs
       search_outputs += found_outputs
@@ -73,26 +63,15 @@ class TranslationMemory(object):
         input_mask = input_mask.cuda()
         search_outputs = search_outputs.cuda()
         output_mask = output_mask.cuda()
-
+    print(search_outputs.size())
     self.hiddens, self.contexts = self.model.get_hiddens_and_contexts(search_inputs, input_mask, search_outputs, output_mask)
-    self.hiddens = self.hiddens.view(batch_size, -1,\
-                                     self.hps.dec_layers * (self.hps.dec_bidirectional + 1),\
-                                     self.hps.dec_hidden_size)
-#     input_mask = input_mask.view(batch_size, -1)
-    self.contexts = self.contexts.view(batch_size, -1,\
-                                     self.hps.enc_layers * (self.hps.enc_bidirectional + 1) *\
-                                     self.hps.enc_hidden_size)
-#     output_mask = output_mask.view(batch_size, -1)
     batch_size_, top_size_, max_output_length = search_outputs.view(batch_size, self.top_size, -1).shape
     assert batch_size == batch_size_
     assert top_size_ == self.top_size
-    search_outputs_ohe = Variable(torch.FloatTensor(batch_size, self.top_size, max_output_length, self.target_lang.output_size()))
+    search_outputs_ohe = Variable(torch.FloatTensor(batch_size, self.top_size * (max_output_length - 1),self.target_lang.output_size()))
     search_outputs_ohe.zero_()
-    search_outputs_ohe.scatter_(3, search_outputs.view(batch_size, self.top_size, max_output_length, 1), 1)
-    self.outputs_exp = search_outputs_ohe[:, :, :-1, :].contiguous()
-#     search_inputs = search_inputs.view(batch_size, self.top_size, -1)
-#     search_outputs = search_outputs.view(batch_size, self.top_size, -1)
-#     return search_inputs, input_mask, search_outputs, output_mask
+    search_outputs_ohe.scatter_(2, search_outputs[:, :-1].contiguous().view(batch_size, self.top_size * (max_output_length - 1), 1), 1)
+    self.outputs_exp = search_outputs_ohe
     self.contexts = self.contexts.detach()
     self.hiddens = self.hiddens.detach()
     if self.is_cuda:
@@ -129,48 +108,29 @@ class TranslationMemory(object):
     self.M = Variable(M, requires_grad=False) 
 
 
-
-    """
-  def match(self, context):
-    '''
-    context = Variable(FloatTensor(B, H))
-    '''
-    B, tm_size, H = self.contexts.shape
-    context = context.contiguous().view(B, 1, H, 1).contiguous()
-    energies = (context *  self.contexts.view(B, tm_size, 1, H))
-    #print(self.contexts.size())
-    #print("energies", energies)
-    #print("M", self.M)
-    energies = (self.M * energies)
-    energies = energies.contiguous().sum(dim=2).sum(dim=2)
-    energies = torch.nn.Softmax(dim=1)(energies)
-    hidden = (energies.view(B, -1, 1, 1) * self.hiddens).sum(dim=1)
-#     output = (energies.view(B, -1, 1, 1) * self.outputs).sum(dim=1)
-    return hidden.permute(1,0,2) #, output
-  """
-
   @log_func
   def match(self, context):
     '''
-    context = Variable(FloatTensor(B, H))
+    context = Variable(FloatTensor(B, HE * DE))
     '''
-    B, tm_size, H = self.contexts.shape
-    #print(self.M.size(), context.size())
-    context = context.matmul(self.M)
-    context = context.contiguous().view(B, 1, H).contiguous()
-    energies = (context *  self.contexts.view(B, tm_size, H))
-    #print(self.contexts.size())
-    #print("energies", energies)
-    #print("M", self.M)
-    #energies = (self.M * energies)
-    energies = energies.contiguous().sum(dim=2)
+    B = context.size(0)
+    T = self.contexts.size(1)
+    context = context.matmul(self.M) # [B, HE * DE]
+    energies = self.contexts.view(B, self.hps.tm_top_size, T, self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1))\
+            .matmul(context.view(-1, 1, self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1), 1)) # [B, self.T]
+    energies = energies.view(B, self.hps.tm_top_size * T)
     energies = torch.nn.Softmax(dim=1)(energies)
 
-    #print("Energies")
-    #print(energies)
-    hidden = (energies.view(B, -1, 1, 1) * self.hiddens).sum(dim=1)
-    output_exp = (energies.view(B, -1, 1) * self.outputs_exp.view(B, -1, self.target_lang.output_size())).sum(dim=1)
-    return hidden.permute(1,0,2) , output_exp
+    hidden = (energies.permute(1,0).contiguous().view(1, self.hps.tm_top_size * T, B, 1)\
+              * self.hiddens.view(\
+              self.hps.dec_layers * (int(self.hps.dec_bidirectional) + 1), self.hps.tm_top_size * T, B, self.hps.dec_hidden_size))\
+      .sum(dim=1) # [LD * BD, B, HD]
+
+    output_exp = (energies.view(B, self.hps.tm_top_size * T, 1) * self.outputs_exp).sum(dim=1) # [B, target_lang_size]
+    if __debug__:
+      assert_shape_equal(hidden.size(), torch.Size([self.hps.dec_layers * (int(self.hps.dec_bidirectional) + 1), B, self.hps.dec_hidden_size]))
+      assert_shape_equal(output_exp.size(), torch.Size([B, self.outputs_exp.size(-1)]))
+    return hidden , output_exp
 
   @log_func
   def cuda(self):
