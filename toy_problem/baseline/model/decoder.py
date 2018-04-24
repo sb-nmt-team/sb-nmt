@@ -41,7 +41,9 @@ class DecoderRNN(nn.Module):
         output: [B, trg_lang_size]
     """
     batch_size, T, _ = encoder_outputs.size()
+    first_iter = False
     if hidden is None:
+      first_iter = True
       hidden = self.init_hidden(batch_size)
     if __debug__:
       assert input.size() == torch.Size([batch_size])
@@ -56,7 +58,9 @@ class DecoderRNN(nn.Module):
     assert context.shape[0] == batch_size, len(context.shape) == 2
     if translationmemory is not None: # calculate scores q
       hidden_state_from_memory, output_exp_from_memory = translationmemory.match(context)
-      #print(context.size(), hidden_state_from_memory.size())
+      if __debug__ and first_iter:
+        assert((hidden_state_from_memory == hidden).all(), '{}\t{}'.format(hidden.size(), hidden_state_from_memory.size()))
+      print(context.size(), hidden_state_from_memory.size())
 
       retrieval_gate_input = torch.cat((hidden.permute(1, 0, 2).contiguous().view(batch_size, -1),\
                                         hidden_state_from_memory.permute(1, 0, 2).contiguous().view(batch_size, -1),\
