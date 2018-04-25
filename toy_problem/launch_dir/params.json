@@ -1,1 +1,2 @@
-{"dataset": "he-en", "fraction": 8,"tm_init": true,  "tm_top_size": 1, "tm_overfitted": true}
+{"dataset": "he-en", "fraction": 4096,"tm_init": true,  "tm_top_size": 1, "tm_overfitted": true,
+"dec_use_deep_fusion": false, "dec_use_shallow_fusion": true}
