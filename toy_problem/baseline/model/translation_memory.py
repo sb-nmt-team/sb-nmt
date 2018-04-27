@@ -129,7 +129,8 @@ class TranslationMemory(object):
     energies = energies.view(B, self.hps.tm_top_size * T)
 
     energies = torch.nn.Softmax(dim=1)(energies)
-
+    energies *= self.output_mask
+    energies /= energies.sum(dim=1, keepdim=True)
     hidden = (energies.permute(1,0).contiguous().view(1, self.hps.tm_top_size * T, B, 1)\
               * self.hiddens.view(\
               self.hps.dec_layers * (int(self.hps.dec_bidirectional) + 1), self.hps.tm_top_size * T, B, self.hps.dec_hidden_size))\
