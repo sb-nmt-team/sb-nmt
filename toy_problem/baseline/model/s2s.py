@@ -21,7 +21,7 @@ class Seq2Seq(nn.Module):
     self.training_hps = training_hps
     self.source_lang = source_lang
     self.target_lang = target_lang
-
+    self.i_cont = 0
     self.encoder = EncoderRNN(source_lang.input_size(), self.hps, self.training_hps, writer=writer)
     self.decoder = DecoderRNN(target_lang.input_size(), target_lang.input_size(), self.hps, self.training_hps, writer=writer)
 
@@ -82,14 +82,20 @@ class Seq2Seq(nn.Module):
     hidden = None
 
     loss = 0.0
+    contexts = Variable(torch.zeros((out_mask.size()[0], out_mask.size()[1] - 1,\
+                                 (self.hps.enc_bidirectional + 1) *\
+                                 self.hps.enc_hidden_size)))
     for i in range(out_mask.size()[1] - 1):
       if use_search:
         output, hidden, _ = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden,\
                                          translation_memory=self.translationmemory)
       else:
         output, hidden, _ = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden)
+        contexts[:, i, :] = _
       loss += (self.criterion(output, output_batch[:, i + 1]) * out_mask[:, i + 1]).sum()
-
+    if not use_search:
+      self.writer.add_scalar("normal/context", (contexts.max(1)[0] - contexts.min(1)[0]).sum(-1).mean(), self.i_cont)
+      self.i_cont += 1
     loss /= out_mask.sum()
     return loss
 
