@@ -14,20 +14,21 @@ from model.translation_memory import TranslationMemory
 
 class Seq2Seq(nn.Module):
   @log_func
-  def __init__(self, source_lang, target_lang, hps, training_hps, searchengine=None):
+  def __init__(self, source_lang, target_lang, hps, training_hps, writer=None, searchengine=None):
     super(Seq2Seq, self).__init__()
     self.hps = hps
+    self.writer = writer
     self.training_hps = training_hps
     self.source_lang = source_lang
     self.target_lang = target_lang
 
-    self.encoder = EncoderRNN(source_lang.input_size(), self.hps, self.training_hps)
-    self.decoder = DecoderRNN(target_lang.input_size(), target_lang.input_size(), self.hps, self.training_hps)
+    self.encoder = EncoderRNN(source_lang.input_size(), self.hps, self.training_hps, writer=writer)
+    self.decoder = DecoderRNN(target_lang.input_size(), target_lang.input_size(), self.hps, self.training_hps, writer=writer)
 
     self.max_length = self.training_hps.max_length
     self.criterion = nn.NLLLoss(reduce=False, size_average=False)
     if hps.tm_init:
-      self.translationmemory = TranslationMemory(self, hps=hps, searchengine=searchengine)
+      self.translationmemory = TranslationMemory(self, writer=writer, hps=hps, searchengine=searchengine)
     else:
       self.translationmemory = None
 

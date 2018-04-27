@@ -11,15 +11,16 @@ from utils.debug_utils import assert_shape_equal
 
 
 class DecoderRNN(nn.Module):
-  def __init__(self, input_size, output_size, hps, training_hps):
+  def __init__(self, input_size, output_size, hps, training_hps, writer=None):
     super(DecoderRNN, self).__init__()
+    self.writer = writer
     self.hps = hps
+    self.i = 0
     self.training_hps = training_hps
     self.num_directions = int(self.hps.dec_bidirectional) + 1
     self.output_size = output_size
-
     self.embedding = nn.Embedding(input_size, self.hps.dec_emb_size, padding_idx=lang.PAD_TOKEN)
-    self.attn = Attn(self.hps)
+    self.attn = Attn(self.hps, self.writer)
     self.gru = nn.GRU(input_size=self.hps.dec_emb_size + \
                                  self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1),
                       hidden_size=self.hps.dec_hidden_size,
@@ -63,7 +64,11 @@ class DecoderRNN(nn.Module):
                                         hidden_state_from_memory.permute(1, 0, 2).contiguous().view(batch_size, -1),\
                                         context.contiguous().view(batch_size, -1)), 1)
       retrieval_gate = torch.sigmoid(translation_memory.retrieval_gate(retrieval_gate_input))
-      print("RG", retrieval_gate.mean())
+
+      self.writer.add_scalar("translation_memory/retrieval_gate_mean", retrieval_gate.mean().data.cpu().numpy()[0], self.i)
+      self.writer.add_scalar("translation_memory/retrieval_gate_max", retrieval_gate.max().data.cpu().numpy()[0], self.i)
+      self.writer.add_scalar("translation_memory/retrieval_gate_min", retrieval_gate.min().data.cpu().numpy()[0], self.i)
+
     if translation_memory is not None and self.hps.dec_use_deep_fusion:
       hidden = retrieval_gate * hidden + (1 - retrieval_gate) * hidden_state_from_memory
     rnn_input = torch.cat((embedded, context), -1).view(batch_size, 1, -1)
@@ -73,7 +78,7 @@ class DecoderRNN(nn.Module):
     output = F.log_softmax(output, -1)
     if translation_memory is not None and self.hps.dec_use_shallow_fusion:
       output = (retrieval_gate * output.clamp(-10, 10).exp() + (1 - retrieval_gate) * output_exp_from_memory.clamp(0.001, 0.999)).log()
-
+    self.i += 1
     return output, next_hidden, context
 
   def init_hidden(self, batch_size):

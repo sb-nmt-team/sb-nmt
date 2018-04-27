@@ -9,9 +9,10 @@ from utils.debug_utils import assert_shape_equal
 
 
 class EncoderRNN(nn.Module):
-  def __init__(self, input_size, hps, training_hps):
+  def __init__(self, input_size, hps, training_hps, writer=None):
     super(EncoderRNN, self).__init__()
     self.hps = hps
+    self.writer = writer
     self.training_hps = training_hps
     self.num_directions = (int(hps.enc_bidirectional) + 1)
 

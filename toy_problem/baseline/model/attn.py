@@ -15,11 +15,13 @@ def get_enc_output_size(self):
 '''
 
 class Attn(nn.Module):
-  def __init__(self, hps):
+  def __init__(self, hps, writer=None):
     super(Attn, self).__init__()
     self.attn = nn.Linear(hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1) + \
                           hps.dec_hidden_size * (int(hps.dec_bidirectional) + 1) * hps.dec_layers,
                           1)
+
+    self.writer = writer
     self.hps = hps
 
   def forward(self, hidden, encoder_outputs, mask):
@@ -47,7 +49,6 @@ class Attn(nn.Module):
     hidden = hidden.repeat(max_len, 1, 1).transpose(0, 1)  # [B, T, HD * layers * directions]
 
     energies = self.attn(torch.cat((hidden, encoder_outputs), -1)).view(batch_size, max_len)  # [B, T, 1]
-
     energies = energies * mask
     energies = F.softmax(energies, dim=-1)
     energies = energies * mask

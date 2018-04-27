@@ -16,10 +16,13 @@ DATASET_DIR = os.path.join(os.path.abspath(os.path.join(__file__ ,"../../..")), 
 
 class TranslationMemory(object):
   @log_func
-  def __init__(self, model, hps, searchengine=None):
+  def __init__(self, model, hps, writer=None, searchengine=None):
     self.is_cuda = False
     self.model = model
+    self.writer = writer
     self.hps = hps
+    self.i = 0
+    self.i_energies = 0
     if searchengine == None:
       searchengine = SearchEngine()
       searchengine.load(hps.tm_bin_path)
@@ -79,6 +82,12 @@ class TranslationMemory(object):
 
     self.contexts = self.contexts.detach()
     self.hiddens = self.hiddens.detach()
+    self.writer.add_scalar('translation_memory/hidden_distance',
+                           (self.hiddens.permute(1, 0, 2, 3).max(2)[0] -
+                            self.hiddens.permute(1, 0, 2, 3).min(2)[0]).sum(-1).sum(-1).mean(), self.i)
+    self.writer.add_scalar('translation_memory/contexts_distance',
+                           (self.contexts.max(1)[0] - self.contexts.min(1)[0]).sum(-1).mean(), self.i)
+    self.i += 1
     self.output_mask = output_mask[:, :-1]
     if self.is_cuda:
         self.contexts = self.contexts.cuda()
@@ -89,6 +98,11 @@ class TranslationMemory(object):
     yield self.M
     for param in self.retrieval_gate.parameters():
       yield param
+
+  def named_parameters(self):
+    yield ("M", self.M)
+    for k, v in self.retrieval_gate.named_parameters():
+      yield (k, v)
 
   @log_func
   def state_dict(self, destination=None, prefix='', keep_vars=False):
@@ -131,6 +145,8 @@ class TranslationMemory(object):
     energies = torch.nn.Softmax(dim=1)(energies)
     energies = energies * self.output_mask
     energies = energies / energies.sum(dim=1, keepdim=True)
+    self.writer.add_scalar("translation_memory/energies", (energies.max(-1)[0] - 1 / self.output_mask.sum(-1)).mean(), self.i_energies)
+    self.i_energies += 1
     hidden = (energies.permute(1,0).contiguous().view(1, self.hps.tm_top_size * T, B, 1)\
               * self.hiddens.view(\
               self.hps.dec_layers * (int(self.hps.dec_bidirectional) + 1), self.hps.tm_top_size * T, B, self.hps.dec_hidden_size))\

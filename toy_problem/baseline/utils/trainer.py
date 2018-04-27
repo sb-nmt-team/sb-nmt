@@ -4,7 +4,7 @@ import tqdm
 from torch.autograd import Variable
 
 import gc
-
+import time
 from metrics.bleu import bleu_from_lines, vowel_bleu_from_lines
 from utils.hparams import HParams
 from utils.translation_utils import run_translation
@@ -18,7 +18,7 @@ import itertools
 
 class Trainer:
   @log_func
-  def __init__(self, model, batch_sampler, hps, training_hps, train=True):
+  def __init__(self, model, batch_sampler, hps, training_hps, writer, train=True):
     self.hps = hps
     self.training_hps = training_hps
 
@@ -30,6 +30,7 @@ class Trainer:
       "bleu": [],
       "vowel-bleu": []
     }
+    self.writer = writer
 
   def reset(self):
     pass
@@ -48,36 +49,35 @@ class Trainer:
     }
 
   @log_func
-  def update_metrics(self, update):
-    for metric in self.metrics:
-      if metric in update:
-        self.metrics[metric].append(update[metric])
+  def update_metrics(self, update, step, prefix):
+    for metric_name in self.metrics:
+      if metric_name not in update:
+        translate_to_all_loggers("{} not found in metrics".format(metric_name))
+
+      current_metric_value = update[metric_name]
+      if prefix == 'tm':
+        for pr in ['normal', 'tm']:
+          self.writer.add_scalar('validation/{}_{}'.format(pr, metric_name), current_metric_value,
+                                step)
+      else:
+        self.writer.add_scalar('validation/{}_{}'.format(prefix, metric_name), current_metric_value,
+                               step)
+      self.metrics[metric_name].append(current_metric_value)
 
   def print_metrics(self):
     for metric in self.metrics:
-      translate_to_all_loggers("{0}: {1}".format(metric, self.metrics[metric][-1]))
+      translate_to_all_loggers("{0}: {1:4.3f}".format(metric, self.metrics[metric][-1]))
 
-  @log_func
-  def train(self):
-    # plt.ion()
-    # plt.show()
-
-    # todo it should load
-    self.model.train()
-
-
-    # todo multiple optimizers
-    optimizer = torch.optim.Adam(self.model.parameters(), lr=self.training_hps.starting_learning_rate)
-
-    if self.training_hps.use_cuda:
-      self.model = self.model.cuda()
-      # optimizer = optimizer.cuda()
-    self.training_hps.use_tm_on_test = False
-    for epoch_id in range(self.training_hps.n_epochs):
-
+  def train_loop(self, optimizer, begin_epoch, end_epoch, prefix="normal", set_model_to_train=True):
+    for epoch_id in range(begin_epoch, end_epoch):
       for batch_id, ((input, input_mask), (output, output_mask)) in \
         tqdm.tqdm(enumerate(self.batch_sampler), total=len(self.batch_sampler)):
-        self.model.train()
+
+        if set_model_to_train:
+          self.model.train()
+        else:
+          self.model.eval()
+
         if self.training_hps.use_cuda:
           input = input.cuda()
           input_mask = input_mask.cuda()
@@ -94,11 +94,13 @@ class Trainer:
         if self.training_hps.use_cuda:
             torch.cuda.empty_cache()
 
-        # it's really doubtfull to hold all of them
-        if self.training_hps.use_cuda:
-          self.losses.append(loss.cpu().data[0])
-        else:
-          self.losses.append(loss.data[0])
+        loss_data = loss.cpu().data[0] if self.training_hps.use_cuda else loss.data[0]
+        self.losses.append(loss_data)
+        self.writer.add_scalar('train/{}_loss'.format(prefix), loss_data, epoch_id * len(self.batch_sampler) + batch_id)
+        for name, param in self.model.named_parameters():
+          self.writer.add_histogram(name, param.clone().cpu().data.numpy(), epoch_id * len(self.batch_sampler) + batch_id)
+        for name, param in self.model.translationmemory.named_parameters():
+          self.writer.add_histogram(name, param.clone().cpu().data.numpy(), epoch_id * len(self.batch_sampler) + batch_id)
 
         if (batch_id * self.batch_sampler.batch_size) % 1000 == 0:
           translate_to_all_loggers("Last 10 loses mean {0:4.3f}".format(np.mean(self.losses[-10:])))
@@ -107,71 +109,45 @@ class Trainer:
       if self.training_hps.use_cuda:
         torch.cuda.empty_cache()
 
-      self.update_metrics(self.validate())
+      self.update_metrics(self.validate(), epoch_id * len(self.batch_sampler), prefix)
 
-      translate_to_all_loggers("Epoch ended, after epoch {} metrics".format(epoch_id))
+      translate_to_all_loggers("Epoch {}. Validation:".format(epoch_id))
       self.print_metrics()
 
-
-      # todo redo the saving
       torch.save(self.model.state_dict(), os.path.join(self.training_hps.logdir, "last_state.ckpt"))
-
       gc.collect()
       if self.training_hps.use_cuda:
         torch.cuda.empty_cache()
 
+  @log_func
+  def train(self):
+    # plt.ion()
+    # plt.show()
 
+    # todo it should load
+    self.model.train()
+
+
+    # todo multiple optimizers
+    optimizer = torch.optim.Adam(self.model.parameters(), lr=self.training_hps.starting_learning_rate)
+
+    if self.training_hps.use_cuda:
+      self.model = self.model.cuda()
+
+    self.training_hps.use_tm_on_test = False
+    self.train_loop(optimizer, begin_epoch=0, end_epoch=self.training_hps.n_epochs)
+
+    translate_to_all_loggers("Starting the trainer with search database.")
 
     self.training_hps.use_tm_on_test = True
     if not self.hps.tm_init:
       return
-
-    translate_to_all_loggers("Starting the trainer with search database.")
-    optimizer = torch.optim.Adam(itertools.chain.from_iterable((self.model.translationmemory.parameters(),)), lr=self.training_hps.starting_learning_rate)
-    # todo copypaste
-    for epoch_id in range(self.training_hps.n_tm_epochs):
-      for batch_id, ((input, input_mask), (output, output_mask)) in \
-        tqdm.tqdm(enumerate(self.batch_sampler), total=len(self.batch_sampler)):
-        if self.training_hps.use_cuda:
-          input = input.cuda()
-          input_mask = input_mask.cuda()
-          output = output.cuda()
-          output_mask = output_mask.cuda()
-        print(input, output)
-
-        loss = self.model(input, input_mask, output, output_mask, use_search=True)
-        optimizer.zero_grad()
-
-        loss.backward()
-        torch.nn.utils.clip_grad_norm(self.model.parameters(), self.training_hps.clip)
-        optimizer.step()
-        gc.collect()
-        if self.training_hps.use_cuda:
-            torch.cuda.empty_cache()
+    optimizer = torch.optim.Adam(itertools.chain.from_iterable((self.model.translationmemory.parameters(),)),
+                                 lr=self.training_hps.starting_learning_rate)
+    self.train_loop(optimizer, begin_epoch=self.training_hps.n_epochs,
+                    end_epoch=self.training_hps.n_tm_epochs + self.training_hps.n_epochs, prefix="tm", set_model_to_train=False)
 
 
-        if self.training_hps.use_cuda:
-          self.losses.append(loss.cpu().data[0])
-        else:
-          self.losses.append(loss.data[0])
-        # print(loss.cpu().data[0])
-        if (batch_id * self.batch_sampler.batch_size) % 1000 == 0:
-          translate_to_all_loggers("Last 10 loses mean {0:4.3f}".format(np.mean(self.losses[-10:])))
-
-      gc.collect()
-      if self.training_hps.use_cuda:
-        torch.cuda.empty_cache()
-
-      self.update_metrics(self.validate())
-
-      translate_to_all_loggers("Epoch ended, after epoch {} metrics".format(epoch_id))
-      self.print_metrics()
-
-      # todo redo the saving
-      torch.save(self.model.state_dict(), os.path.join(self.training_hps.logdir, "last_state.ckpt"))
-      gc.collect()
-      if self.training_hps.use_cuda:
-        torch.cuda.empty_cache()
   def get_metrics(self):
     # todo return metrics and not this stuff
     return self.losses, self.bleu
@@ -193,4 +169,5 @@ class Trainer:
       use_tm_on_test=False,
       n_tm_epochs=10,
       cuda_visible_devices=1,
+      force_override=False
     )

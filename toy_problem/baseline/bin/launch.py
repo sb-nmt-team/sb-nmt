@@ -18,6 +18,7 @@ from utils.launch_utils import LOGGING_BASE, find_latest_experiment, \
 from data.lang import read_problem
 from data.batcher import BatchSampler
 from search_engine import SearchEngine, OverfittedSearchEngine
+from tensorboardX import SummaryWriter
 
 TASK_NAME = "toy_problem"
 TRAINED_MODELS_FOLDER = os.path.join(os.path.abspath(os.path.join(__file__ ,"../../..")), "trained_models")
@@ -43,6 +44,7 @@ def main():
   model_folder = os.path.join(TRAINED_MODELS_FOLDER, model_name)
 
   latest_folder = find_latest_experiment(model_folder) if os.path.exists(model_folder) else None
+  latest_folder = None if training_params.force_override else latest_folder
   new_folder = create_new_experiment(model_folder, latest_folder)
 
   logger_config['handlers']['debug']['filename'] = os.path.join(new_folder, 'debug_logs')
@@ -89,16 +91,20 @@ def main():
       searchengine = SearchEngine()
     searchengine.load(hps.tm_bin_path)
     searchengine.set_dictionary(full_dataset)
-    print("Using searchengine: {}".format(searchengine.__class__))
 
-  model = s2s.Seq2Seq(src, tgt, hps, training_params, searchengine)
+  writer = SummaryWriter(log_dir=training_params.logdir)
+
+  model = s2s.Seq2Seq(src, tgt, hps, training_params, writer=writer, searchengine=searchengine)
 
   with open(os.path.join(new_folder, "model.meta"), "w") as fout:
     fout.write(repr(model))
   translate_to_all_loggers(repr(model))
 
-  trainer = Trainer(model, batch_sampler, hps, training_params, searchengine)
+
+  trainer = Trainer(model, batch_sampler, hps, training_params, writer, searchengine)
   trainer.train()
+  writer.export_scalars_to_json("./all_scalars.json")
+  writer.close()
 
 if __name__ == '__main__':
   main()
