@@ -66,7 +66,7 @@ class TranslationMemory(object):
         search_inputs = search_inputs.cuda()
         input_mask = input_mask.cuda()
         search_outputs = search_outputs.cuda()
-        output_mask = output_mask.cuda()
+        output_mask = output_mask.cuda() #
     # print(search_outputs.size())
     self.hiddens, self.contexts = self.model.get_hiddens_and_contexts(search_inputs, input_mask, search_outputs, output_mask)
     batch_size_, top_size_, max_output_length = search_outputs.view(batch_size, self.top_size, -1).shape
@@ -76,8 +76,10 @@ class TranslationMemory(object):
     search_outputs_ohe.zero_()
     search_outputs_ohe.scatter_(2, search_outputs[:, :-1].contiguous().view(batch_size, self.top_size * (max_output_length - 1), 1), 1)
     self.outputs_exp = search_outputs_ohe
+
     self.contexts = self.contexts.detach()
     self.hiddens = self.hiddens.detach()
+    self.output_mask = output_mask[:, :-1]
     if self.is_cuda:
         self.contexts = self.contexts.cuda()
         self.hiddens = self.hiddens.cuda()
@@ -125,6 +127,7 @@ class TranslationMemory(object):
     energies = self.contexts.view(B, self.hps.tm_top_size, T, self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1))\
             .matmul(context.view(-1, 1, self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1), 1)) # [B, self.T]
     energies = energies.view(B, self.hps.tm_top_size * T)
+
     energies = torch.nn.Softmax(dim=1)(energies)
 
     hidden = (energies.permute(1,0).contiguous().view(1, self.hps.tm_top_size * T, B, 1)\
