@@ -7,6 +7,7 @@ from torch.autograd import Variable
 from data import lang
 from utils.hparams import merge_hparams
 from utils.launch_utils import log_func
+from utils.debug_utils import assert_shape_equal
 from model.encoder import EncoderRNN
 from model.decoder import DecoderRNN
 from model.translation_memory import TranslationMemory
@@ -50,7 +51,7 @@ class Seq2Seq(nn.Module):
     for i in range(self.max_length):
       if use_search:
         output, hidden, _ = self.decoder(dec_input, encoder_outputs, mask=mask, hidden=hidden,\
-                                         translationmemory=self.translationmemory)
+                                         translation_memory=self.translationmemory)
       else:
         output, hidden, _ = self.decoder(dec_input, encoder_outputs, mask=mask, hidden=hidden)
       _, output_idx = torch.max(output, -1)
@@ -72,7 +73,7 @@ class Seq2Seq(nn.Module):
   @log_func
   def forward(self, input_batch, mask, output_batch, out_mask, use_search=False):
     encoder_outputs = self.encoder(input_batch)
-    print("US: ", use_search)
+
     if use_search:
       assert self.translationmemory is not None, "No sample pairs for translation memory, did you want it?"
       self.translationmemory.fit(input_batch)
@@ -83,7 +84,7 @@ class Seq2Seq(nn.Module):
     for i in range(out_mask.size()[1] - 1):
       if use_search:
         output, hidden, _ = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden,\
-                                         translationmemory=self.translationmemory, verbose = (i==0))
+                                         translation_memory=self.translationmemory)
       else:
         output, hidden, _ = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden)
       loss += (self.criterion(output, output_batch[:, i + 1]) * out_mask[:, i + 1]).sum()
@@ -93,40 +94,26 @@ class Seq2Seq(nn.Module):
 
   @log_func
   def get_hiddens_and_contexts(self, input_batch, mask, output_batch, out_mask):
+    """
+        input_batch: [B, T]
+        encoder_outputs:  [B, T, DE * HE]
+    """
     encoder_outputs = self.encoder(input_batch)
     B, *_ = input_batch.shape
     hidden = None
 
     loss = 0.0
-    hiddens = Variable(torch.zeros((B, out_mask.size()[1] - 1,\
-                                 self.hps.dec_layers * (self.hps.dec_bidirectional + 1) * \
-                                 self.hps.dec_hidden_size)))
+    hiddens = Variable(torch.zeros((self.hps.dec_layers * (self.hps.dec_bidirectional + 1), out_mask.size()[1] - 1, \
+                                    B,  self.hps.dec_hidden_size)))
     contexts = Variable(torch.zeros((B, out_mask.size()[1] - 1,\
-                                 self.hps.enc_layers * (self.hps.enc_bidirectional + 1) *\
+                                 (self.hps.enc_bidirectional + 1) *\
                                  self.hps.enc_hidden_size)))
     
     for i in range(out_mask.size()[1] - 1):
-    #for i in range(out_mask.size()[1]):
-      output, hidden, context = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden, verbose=(i<=2))
-      print("Hidden size", hidden.size())
-      print("Hiddens size", hiddens.size())
-      print("Sentence size", hiddens[:, i, :].size())
-      print("Batch shape", B)
-      print("_"*10)
-      print(input_batch.shape)
-      hidden_ = hidden.permute(1, 0, 2).contiguous().view(B, -1)
-      print(context.size())
-      if i == 0:
-        print(context[0, :10])
-        print("AAAAAAAA")
-      #context = context.permute(1, 0, 2).contiguous().view(B, -1)
-      assert hiddens[:, i, :].size() == hidden_.size()
-      assert contexts[:, i, :].size() == context.size()
-      hiddens[:, i, :] = hidden_.clone()
-      print("Hidden_ size", hidden_.size())
-      print("Hiddens size", hiddens.size())
-      contexts[:, i, :] = context.clone()
-    print("BBBBB: ", contexts[0, 0:2, :10])
+      output, hidden, context = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden)
+      hiddens[:, i, :, :] = hidden
+      contexts[:, i, :] = context
+
     return hiddens, contexts
 
   def state_dict(self, destination=None, prefix='', keep_vars=False):
