@@ -68,7 +68,7 @@ class Trainer:
     for metric in self.metrics:
       translate_to_all_loggers("{0}: {1:4.3f}".format(metric, self.metrics[metric][-1]))
 
-  def train_loop(self, optimizer, begin_epoch, end_epoch, prefix="normal", set_model_to_train=True):
+  def train_loop(self, optimizer, begin_epoch, end_epoch, prefix="normal", set_model_to_train=True, use_search=False):
     for epoch_id in range(begin_epoch, end_epoch):
       for batch_id, ((input, input_mask), (output, output_mask)) in \
         tqdm.tqdm(enumerate(self.batch_sampler), total=len(self.batch_sampler)):
@@ -84,7 +84,7 @@ class Trainer:
           output = output.cuda()
           output_mask = output_mask.cuda()
 
-        loss = self.model(input, input_mask, output, output_mask, use_search=False)
+        loss = self.model(input, input_mask, output, output_mask, use_search=use_search)
         optimizer.zero_grad()
 
         loss.backward()
@@ -142,10 +142,10 @@ class Trainer:
     self.training_hps.use_tm_on_test = True
     if not self.hps.tm_init:
       return
-    optimizer = torch.optim.Adam(itertools.chain.from_iterable((self.model.translationmemory.parameters(),)),
+    optimizer = torch.optim.Adam(itertools.chain.from_iterable((self.model.translationmemory.parameters(),self.model.parameters())),
                                  lr=self.training_hps.starting_learning_rate)
     self.train_loop(optimizer, begin_epoch=self.training_hps.n_epochs,
-                    end_epoch=self.training_hps.n_tm_epochs + self.training_hps.n_epochs, prefix="tm", set_model_to_train=False)
+                    end_epoch=self.training_hps.n_tm_epochs + self.training_hps.n_epochs, prefix="tm", set_model_to_train=True, use_search=True)
 
 
   def get_metrics(self):
