@@ -51,7 +51,7 @@ class Seq2Seq(nn.Module):
     for i in range(self.max_length):
       if use_search:
         output, hidden, _ = self.decoder(dec_input, encoder_outputs, mask=mask, hidden=hidden,\
-                                         translationmemory=self.translationmemory)
+                                         translation_memory=self.translationmemory)
       else:
         output, hidden, _ = self.decoder(dec_input, encoder_outputs, mask=mask, hidden=hidden)
       _, output_idx = torch.max(output, -1)
@@ -84,7 +84,7 @@ class Seq2Seq(nn.Module):
     for i in range(out_mask.size()[1] - 1):
       if use_search:
         output, hidden, _ = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden,\
-                                         translationmemory=self.translationmemory)
+                                         translation_memory=self.translationmemory)
       else:
         output, hidden, _ = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden)
       loss += (self.criterion(output, output_batch[:, i + 1]) * out_mask[:, i + 1]).sum()

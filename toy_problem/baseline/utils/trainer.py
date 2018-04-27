@@ -127,7 +127,7 @@ class Trainer:
       return
 
     translate_to_all_loggers("Starting the trainer with search database.")
-    optimizer = torch.optim.Adam(itertools.chain.from_iterable((self.model.parameters(), self.model.translationmemory.parameters())), lr=self.training_hps.starting_learning_rate)
+    optimizer = torch.optim.Adam(itertools.chain.from_iterable((self.model.translationmemory.parameters(),)), lr=self.training_hps.starting_learning_rate)
     # todo copypaste
     for epoch_id in range(self.training_hps.n_tm_epochs):
       for batch_id, ((input, input_mask), (output, output_mask)) in \

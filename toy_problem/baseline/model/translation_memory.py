@@ -35,6 +35,9 @@ class TranslationMemory(object):
     M_inits = torch.randn(size, size) * 0.01 +\
                        torch.eye(size)
     self.M = Variable(M_inits, requires_grad=True)
+    self.retrieval_gate = nn.Linear(self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1) + \
+                                 self.hps.dec_layers * self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1) +\
+                                 self.hps.dec_layers * self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1), 1)
 
   @log_func
   def fit(self, input_sentences):
@@ -57,14 +60,14 @@ class TranslationMemory(object):
     input_mask = Variable(torch.from_numpy(input_mask.astype(np.float32))).contiguous()
     search_outputs, output_mask = self.target_lang.convert_batch(search_outputs)
     search_outputs = Variable(torch.from_numpy(search_outputs.astype(np.int64))).contiguous()
-    print(search_inputs, search_outputs)
+    # print(search_inputs, search_outputs)
     output_mask = Variable(torch.from_numpy(output_mask.astype(np.float32))).contiguous()
     if self.is_cuda:
         search_inputs = search_inputs.cuda()
         input_mask = input_mask.cuda()
         search_outputs = search_outputs.cuda()
         output_mask = output_mask.cuda()
-    print(search_outputs.size())
+    # print(search_outputs.size())
     self.hiddens, self.contexts = self.model.get_hiddens_and_contexts(search_inputs, input_mask, search_outputs, output_mask)
     batch_size_, top_size_, max_output_length = search_outputs.view(batch_size, self.top_size, -1).shape
     assert batch_size == batch_size_
@@ -82,6 +85,8 @@ class TranslationMemory(object):
   def parameters(self):
     #return []
     yield self.M
+    for param in self.retrieval_gate.parameters():
+      yield param
 
   @log_func
   def state_dict(self, destination=None, prefix='', keep_vars=False):

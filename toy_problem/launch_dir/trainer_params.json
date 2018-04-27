@@ -1,2 +1,2 @@
-{"use_tm_on_test":true, "use_cuda":false, "batch_size":128, "prefix":"debugging_search",  "model_name":"experiment", "n_epochs":1, "n_tm_epochs":25,
-"max_length":1}
+{"use_tm_on_test":true, "use_cuda":false, "batch_size":512, "prefix":"debugging_search",  "model_name":"experiment", "n_epochs":3, "n_tm_epochs":25,
+"max_length":16}
