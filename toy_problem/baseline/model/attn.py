@@ -19,7 +19,9 @@ class Attn(nn.Module):
     super(Attn, self).__init__()
     self.attn = nn.Linear(hps.enc_hidden_size * (int(hps.enc_bidirectional) + 1) + \
                           hps.dec_hidden_size * (int(hps.dec_bidirectional) + 1) * hps.dec_layers,
-                          1)
+                          128)
+    self.attn1_5 = nn.Tanh()
+    self.attn2 = nn.Linear(128, 1)
 
     self.writer = writer
     self.hps = hps
@@ -48,7 +50,8 @@ class Attn(nn.Module):
     hidden = hidden.view(batch_size, -1)  # [B, HD * layers * directions]
     hidden = hidden.repeat(max_len, 1, 1).transpose(0, 1)  # [B, T, HD * layers * directions]
 
-    energies = self.attn(torch.cat((hidden, encoder_outputs), -1)).view(batch_size, max_len)  # [B, T, 1]
+    energies = self.attn(torch.cat((hidden, encoder_outputs), -1)).view(batch_size, max_len, 128)  # [B, T, 128]
+    energies = self.attn2(self.attn1_5(energies).view(batch_size, max_len, 128)).view(batch_size, max_len) #[B, T]
     energies = energies * mask
     energies = F.softmax(energies, dim=-1)
     energies = energies * mask

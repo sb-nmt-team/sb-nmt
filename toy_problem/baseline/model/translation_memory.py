@@ -77,7 +77,7 @@ class TranslationMemory(object):
     assert top_size_ == self.top_size
     search_outputs_ohe = Variable(torch.FloatTensor(batch_size, self.top_size * (max_output_length - 1),self.target_lang.output_size()))
     search_outputs_ohe.zero_()
-    search_outputs_ohe.scatter_(2, search_outputs[:, :-1].contiguous().view(batch_size, self.top_size * (max_output_length - 1), 1), 1)
+    search_outputs_ohe.scatter_(2, search_outputs[:, 1:].contiguous().view(batch_size, self.top_size * (max_output_length - 1), 1), 1)
     self.outputs_exp = search_outputs_ohe
 
     self.contexts = self.contexts.detach()
