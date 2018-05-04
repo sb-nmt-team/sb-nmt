@@ -76,6 +76,8 @@ class TranslationMemory(object):
     assert batch_size == batch_size_
     assert top_size_ == self.top_size
     search_outputs_ohe = Variable(torch.FloatTensor(batch_size, self.top_size * (max_output_length - 1),self.target_lang.output_size()))
+    if self.is_cuda:
+        search_outputs_ohe = search_outputs_ohe.cuda()
     search_outputs_ohe.zero_()
     search_outputs_ohe.scatter_(2, search_outputs[:, 1:].contiguous().view(batch_size, self.top_size * (max_output_length - 1), 1), 1)
     self.outputs_exp = search_outputs_ohe
@@ -164,11 +166,13 @@ class TranslationMemory(object):
 
     #self.M = self.M.cuda()
     self.M = Variable(self.M.data.cuda(), requires_grad=True)
+    self.retrieval_gate  = self.retrieval_gate.cuda()
     return self
 
   def cpu(self):
     self.is_cuda = False
     self.M = self.M.cpu()
+    self.retrieval_gate  = self.retrieval_gate.cpu()
     return self
 
   @staticmethod
