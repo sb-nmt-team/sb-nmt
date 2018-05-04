@@ -35,8 +35,8 @@ class TranslationMemory(object):
     size = hps.enc_hidden_size * is_bidir
     #M_inits = torch.randn(size, size) * 0.01 +\
     #                   torch.eye(size).view(1, 1, size, size)
-    M_inits = torch.randn(size, size) * 0.01 +\
-                       torch.eye(size)
+    #M_inits = torch.randn(size, size) * 0.01 + torch.eye(size)
+    M_inits = torch.eye(size)
     self.M = Variable(M_inits, requires_grad=True)
     self.retrieval_gate = nn.Linear(self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1) + \
                                  self.hps.dec_layers * self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1) +\
@@ -140,8 +140,8 @@ class TranslationMemory(object):
     B = context.size(0)
     T = self.contexts.size(1)
     value = 0
-    c = context.data.numpy()
-    sc = self.contexts.data.numpy()
+    c = context.data.cpu().numpy()
+    sc = self.contexts.data.cpu().numpy()
     for i in range(len(context)):
       flag = any([np.allclose(x, c[i]) for x in sc[i]])
       if not flag:
@@ -175,7 +175,7 @@ class TranslationMemory(object):
     self.is_cuda = True
 
     #self.M = self.M.cuda()
-    self.M = Variable(self.M.data.cuda(), requires_grad=True)
+    self.M = Variable(self.M.data.cuda(), requires_grad=self.M.requires_grad)
     self.retrieval_gate  = self.retrieval_gate.cuda()
     return self
 
