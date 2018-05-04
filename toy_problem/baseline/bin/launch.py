@@ -71,6 +71,14 @@ def main():
   dataset_path = os.path.join(DATASET_DIR, hps.dataset)
   full_dataset, src, tgt = read_problem(dataset_path, n_sents=None)
   dataset, src, tgt = read_problem(dataset_path, n_sents=len(full_dataset["train"][0]) // hps.fraction)
+  
+  #DELETE ME
+  #print(len(dataset["dev"]))
+  #n = len(dataset["dev"]) // hps.fraction
+  #print(n)
+  #new_dev = (dataset["dev"][0][:n], dataset["dev"][1][:n])
+  #dataset["dev"] = new_dev 
+  #END DELTE ME
 
   training_params.set('logdir', new_folder)
   log_parameters_info(hps, training_params)
