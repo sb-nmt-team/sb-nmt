@@ -1,2 +1,2 @@
-{"use_tm_on_test":true, "use_cuda":true, "cuda_visible_devices":"4", "batch_size":32, "prefix":"debugging_search",  "model_name":"experiment", "n_epochs":0, "n_tm_epochs":5,
+{"use_tm_on_test":true, "use_cuda":true, "cuda_visible_devices":"4", "batch_size":128, "prefix":"debugging_search",  "model_name":"experiment", "n_epochs":0, "n_tm_epochs":5,
 "max_length":16, "force_override": true}

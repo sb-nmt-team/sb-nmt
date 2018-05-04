@@ -65,9 +65,13 @@ class DecoderRNN(nn.Module):
                                         context.contiguous().view(batch_size, -1)), 1)
       retrieval_gate = torch.sigmoid(translation_memory.retrieval_gate(retrieval_gate_input))
 
-      self.writer.add_scalar("translation_memory/retrieval_gate_mean", retrieval_gate.mean().data.cpu().numpy()[0], self.i)
-      self.writer.add_scalar("translation_memory/retrieval_gate_max", retrieval_gate.max().data.cpu().numpy()[0], self.i)
-      self.writer.add_scalar("translation_memory/retrieval_gate_min", retrieval_gate.min().data.cpu().numpy()[0], self.i)
+    
+      is_testing = "testing" if not self.train else "training"
+      #print(is_testing)
+
+      self.writer.add_scalar("translation_memory/retrieval_gate_mean_{}".format(is_testing), retrieval_gate.mean().data.cpu().numpy()[0], self.i)
+      self.writer.add_scalar("translation_memory/retrieval_gate_max_{}".format(is_testing), retrieval_gate.max().data.cpu().numpy()[0], self.i)
+      self.writer.add_scalar("translation_memory/retrieval_gate_min_{}".format(is_testing), retrieval_gate.min().data.cpu().numpy()[0], self.i)
 
     if translation_memory is not None and self.hps.dec_use_deep_fusion:
       hidden = retrieval_gate * hidden + (1 - retrieval_gate) * hidden_state_from_memory

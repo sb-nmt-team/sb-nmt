@@ -28,7 +28,9 @@ class Trainer:
 
     self.metrics = {
       "bleu": [],
-      "vowel-bleu": []
+      "vowel-bleu": [],
+      "bleu-train": [],
+      "vowel-bleu-train": []
     }
     self.writer = writer
 
@@ -42,14 +44,27 @@ class Trainer:
     translation = run_translation(self.batch_sampler.get_src(), self.model, test_data,
                                        self.training_hps)
     real_translation = [' '.join(x) for x in self.batch_sampler.dev[1]]
-    self.model.train()
-    return {
+    
+    result = {
       "bleu": bleu_from_lines(real_translation, translation),
       "vowel-bleu": vowel_bleu_from_lines(real_translation, translation)
     }
+    
+    n_train = len(test_data)
+    test_data = self.batch_sampler.train[0][:n_train]
+    real_translation = [' '.join(x) for x in self.batch_sampler.train[1][:n_train]]
+    translation = run_translation(self.batch_sampler.get_src(), self.model, test_data,
+                                       self.training_hps)
+
+    result["bleu-train"] = bleu_from_lines(real_translation, translation)
+    result["vowel-bleu-train"] = vowel_bleu_from_lines(real_translation, translation)
+
+    self.model.train()
+    return result
 
   @log_func
   def update_metrics(self, update, step, prefix):
+    #is_testing = not self.model.train
     for metric_name in self.metrics:
       if metric_name not in update:
         translate_to_all_loggers("{} not found in metrics".format(metric_name))
@@ -98,12 +113,25 @@ class Trainer:
         self.losses.append(loss_data)
         self.writer.add_scalar('train/{}_loss'.format(prefix), loss_data, epoch_id * len(self.batch_sampler) + batch_id)
         for name, param in self.model.named_parameters():
-          self.writer.add_histogram(name, param.clone().cpu().data.numpy(), epoch_id * len(self.batch_sampler) + batch_id)
+            try:
+                self.writer.add_histogram(name, param.clone().cpu().data.numpy(), epoch_id * len(self.batch_sampler) + batch_id)
+            except Exception as e:
+                print("Failed on ", name)
+                print(e)
+                raise 
         for name, param in self.model.translationmemory.named_parameters():
           self.writer.add_histogram(name, param.clone().cpu().data.numpy(), epoch_id * len(self.batch_sampler) + batch_id)
 
-        if (batch_id * self.batch_sampler.batch_size) % 1000 == 0:
-          translate_to_all_loggers("Last 10 loses mean {0:4.3f}".format(np.mean(self.losses[-10:])))
+        if (batch_id * self.batch_sampler.batch_size) % 500 == 0:
+            translate_to_all_loggers("Last 10 loses mean {0:4.3f}".format(np.mean(self.losses[-10:])))
+            gc.collect()
+            if self.training_hps.use_cuda:
+                torch.cuda.empty_cache()
+
+            self.update_metrics(self.validate(), epoch_id * len(self.batch_sampler), prefix)
+
+            translate_to_all_loggers("Epoch {}. Validation:".format(epoch_id))
+            self.print_metrics()
 
       gc.collect()
       if self.training_hps.use_cuda:
