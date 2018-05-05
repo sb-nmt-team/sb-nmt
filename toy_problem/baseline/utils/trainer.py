@@ -111,7 +111,10 @@ class Trainer:
         optimizer.zero_grad()
 
         loss.backward()
-        torch.nn.utils.clip_grad_norm(self.model.parameters(), self.training_hps.clip)
+        if use_search:
+          torch.nn.utils.clip_grad_norm(itertools.chain.from_iterable((self.model.translationmemory.parameters(),self.model.parameters())), self.training_hps.clip)
+        else:
+          torch.nn.utils.clip_grad_norm(self.model.parameters(), self.training_hps.clip)
         optimizer.step()
         gc.collect()
         if self.training_hps.use_cuda:
