@@ -90,7 +90,7 @@ class TranslationMemory(object):
     self.writer.add_scalar('translation_memory/contexts_distance',
                            (self.contexts.max(1)[0] - self.contexts.min(1)[0]).sum(-1).mean(), self.i)
     self.i += 1
-    self.output_mask = output_mask[:, :-1]
+    self.output_mask = output_mask[:, 1:]
     if self.is_cuda:
         self.contexts = self.contexts.cuda()
         self.hiddens = self.hiddens.cuda()
@@ -165,9 +165,15 @@ class TranslationMemory(object):
       .sum(dim=1) # [LD * BD, B, HD]
 
     output_exp = (energies.view(B, self.hps.tm_top_size * T, 1) * self.outputs_exp).sum(dim=1) # [B, target_lang_size]
+
+    
+
     if __debug__:
       assert_shape_equal(hidden.size(), torch.Size([self.hps.dec_layers * (int(self.hps.dec_bidirectional) + 1), B, self.hps.dec_hidden_size]))
       assert_shape_equal(output_exp.size(), torch.Size([B, self.outputs_exp.size(-1)]))
+
+
+      #print(self.M)
     return hidden , output_exp
 
   @log_func

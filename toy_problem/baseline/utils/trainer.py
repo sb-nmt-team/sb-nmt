@@ -40,7 +40,7 @@ class Trainer:
   @log_func
   def validate(self):
     self.model.eval()
-    test_data = self.batch_sampler.dev[0]
+    test_data = self.batch_sampler.dev[0][:100]
     translation = run_translation(self.batch_sampler.get_src(), self.model, test_data,
                                        self.training_hps)
     real_translation = [' '.join(x) for x in self.batch_sampler.dev[1]]
@@ -112,8 +112,17 @@ class Trainer:
 
         loss.backward()
         if use_search:
+          for param_name, value in itertools.chain.from_iterable((self.model.translationmemory.named_parameters(),self.model.named_parameters())):
+              if hasattr(value, "grad") and value.grad is not None:
+                self.writer.add_scalar('grads_search/{}'.format(param_name),
+                                value.grad.cpu().mean(), epoch_id * len(self.batch_sampler) + batch_id)
+
           torch.nn.utils.clip_grad_norm(itertools.chain.from_iterable((self.model.translationmemory.parameters(),self.model.parameters())), self.training_hps.clip)
         else:
+          for param_name, value in self.model.state_dict().items():
+              if hasattr(value, "grad") and value.grad is not None:
+                self.writer.add_scalar('grads_no_search/{}'.format(param_name),
+                                value.grad.cpu().mean(), epoch_id * len(self.batch_sampler) + batch_id)
           torch.nn.utils.clip_grad_norm(self.model.parameters(), self.training_hps.clip)
         optimizer.step()
         gc.collect()
