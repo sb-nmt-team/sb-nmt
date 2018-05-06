@@ -177,7 +177,7 @@ class Trainer:
 
 
     # todo multiple optimizers
-    optimizer = torch.optim.Adam(self.model.parameters(), lr=self.training_hps.starting_learning_rate)
+    optimizer = torch.optim.Adam(self.model.parameters(), lr=self.training_hps.starting_learning_rate, eps=1e-6)
 
     if self.training_hps.use_cuda:
       self.model = self.model.cuda()
@@ -191,7 +191,7 @@ class Trainer:
     if not self.hps.tm_init:
       return
     optimizer = torch.optim.Adam(itertools.chain.from_iterable((self.model.translationmemory.parameters(),self.model.parameters())),
-                                 lr=self.training_hps.starting_learning_rate)
+                                 lr=self.training_hps.starting_learning_rate, eps=1e-6)
     self.train_loop(optimizer, begin_epoch=self.training_hps.n_epochs,
                     end_epoch=self.training_hps.n_tm_epochs + self.training_hps.n_epochs, prefix="tm", set_model_to_train=True, use_search=True)
 
@@ -208,7 +208,7 @@ class Trainer:
       batch_size=128,
       n_epochs=40,
       clip=0.25,
-      starting_learning_rate=1e-3, # todo
+      starting_learning_rate=1e-4, # todo
       learning_rate_strategy="constant_decay", # todo
       optimizer="Adam", # todo,
       prefix="",

@@ -82,8 +82,6 @@ class TranslationMemory(object):
     search_outputs_ohe.scatter_(2, search_outputs[:, 1:].contiguous().view(batch_size, self.top_size * (max_output_length - 1), 1), 1)
     self.outputs_exp = search_outputs_ohe
 
-    self.contexts = self.contexts.detach()
-    self.hiddens = self.hiddens.detach()
     self.writer.add_scalar('translation_memory/hidden_distance',
                            (self.hiddens.permute(1, 0, 2, 3).max(2)[0] -
                             self.hiddens.permute(1, 0, 2, 3).min(2)[0]).sum(-1).sum(-1).mean(), self.i)
@@ -94,6 +92,8 @@ class TranslationMemory(object):
     if self.is_cuda:
         self.contexts = self.contexts.cuda()
         self.hiddens = self.hiddens.cuda()
+    #self.contexts = self.contexts.detach()
+    #self.hiddens = self.hiddens.detach()
 
   def parameters(self):
     #return []
@@ -172,6 +172,8 @@ class TranslationMemory(object):
       assert_shape_equal(hidden.size(), torch.Size([self.hps.dec_layers * (int(self.hps.dec_bidirectional) + 1), B, self.hps.dec_hidden_size]))
       assert_shape_equal(output_exp.size(), torch.Size([B, self.outputs_exp.size(-1)]))
 
+      #print(output_exp.size())
+      print(output_exp.sum(dim=1))
 
       #print(self.M)
     return hidden , output_exp

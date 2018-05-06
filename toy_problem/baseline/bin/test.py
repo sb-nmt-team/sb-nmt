@@ -60,6 +60,7 @@ def main():
   if training_params.use_cuda:
       model = model.cuda()
 
+  sys.stderr.write("Loading the model state\n")
   state_dict = torch.load(args.model_state)
   model.load_state_dict(state_dict)
 
