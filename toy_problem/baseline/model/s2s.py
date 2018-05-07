@@ -11,6 +11,7 @@ from utils.debug_utils import assert_shape_equal
 from model.encoder import EncoderRNN
 from model.decoder import DecoderRNN
 from model.translation_memory import TranslationMemory
+from utils.launch_utils import log_func, translate_to_all_loggers
 
 class Seq2Seq(nn.Module):
   @log_func
@@ -52,7 +53,7 @@ class Seq2Seq(nn.Module):
     for i in range(self.max_length):
       if use_search:
         output, hidden, _ = self.decoder(dec_input, encoder_outputs, mask=mask, hidden=hidden,\
-                                         translation_memory=self.translationmemory)
+                                         translation_memory=self.translationmemory, position=i)
       else:
         output, hidden, _ = self.decoder(dec_input, encoder_outputs, mask=mask, hidden=hidden)
       _, output_idx = torch.max(output, -1)
@@ -85,10 +86,11 @@ class Seq2Seq(nn.Module):
     contexts = Variable(torch.zeros((out_mask.size()[0], out_mask.size()[1] - 1,\
                                  (self.hps.enc_bidirectional + 1) *\
                                  self.hps.enc_hidden_size)))
+    #translate_to_all_loggers("out_mask s2s {}".format(out_mask.size()))
     for i in range(out_mask.size()[1] - 1):
       if use_search:
         output, hidden, _ = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden,\
-                                         translation_memory=self.translationmemory)
+                                         translation_memory=self.translationmemory, position=i)
       else:
         output, hidden, _ = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden)
         contexts[:, i, :] = _

@@ -40,7 +40,9 @@ class Trainer:
   @log_func
   def validate(self):
     self.model.eval()
-    test_data = self.batch_sampler.dev[0][:100]
+    #test_data = self.batch_sampler.dev[0][:100]
+    test_data = self.batch_sampler.dev[0]
+    translate_to_all_loggers("Validating on {}".format(len(test_data)))
     translation = run_translation(self.batch_sampler.get_src(), self.model, test_data,
                                        self.training_hps)
     real_translation = [' '.join(x) for x in self.batch_sampler.dev[1]]
@@ -119,7 +121,7 @@ class Trainer:
 
           torch.nn.utils.clip_grad_norm(itertools.chain.from_iterable((self.model.translationmemory.parameters(),self.model.parameters())), self.training_hps.clip)
         else:
-          for param_name, value in self.model.state_dict().items():
+          for param_name, value in self.model.named_parameters():
               if hasattr(value, "grad") and value.grad is not None:
                 self.writer.add_scalar('grads_no_search/{}'.format(param_name),
                                 value.grad.cpu().mean(), epoch_id * len(self.batch_sampler) + batch_id)
@@ -177,7 +179,7 @@ class Trainer:
 
 
     # todo multiple optimizers
-    optimizer = torch.optim.Adam(self.model.parameters(), lr=self.training_hps.starting_learning_rate, eps=1e-6)
+    optimizer = torch.optim.Adam(self.model.parameters(), lr=self.training_hps.starting_learning_rate)
 
     if self.training_hps.use_cuda:
       self.model = self.model.cuda()
@@ -191,7 +193,7 @@ class Trainer:
     if not self.hps.tm_init:
       return
     optimizer = torch.optim.Adam(itertools.chain.from_iterable((self.model.translationmemory.parameters(),self.model.parameters())),
-                                 lr=self.training_hps.starting_learning_rate, eps=1e-6)
+                                 lr=self.training_hps.starting_learning_rate)
     self.train_loop(optimizer, begin_epoch=self.training_hps.n_epochs,
                     end_epoch=self.training_hps.n_tm_epochs + self.training_hps.n_epochs, prefix="tm", set_model_to_train=True, use_search=True)
 
@@ -208,7 +210,7 @@ class Trainer:
       batch_size=128,
       n_epochs=40,
       clip=0.25,
-      starting_learning_rate=1e-4, # todo
+      starting_learning_rate=1e-3, # todo
       learning_rate_strategy="constant_decay", # todo
       optimizer="Adam", # todo,
       prefix="",

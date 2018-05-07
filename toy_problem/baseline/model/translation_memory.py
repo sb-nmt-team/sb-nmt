@@ -9,6 +9,7 @@ import torch.nn as nn
 from utils.launch_utils import log_func
 from utils.debug_utils import assert_shape_equal
 from data.lang import read_problem
+from utils.launch_utils import log_func, translate_to_all_loggers
 
 SE_DIR = os.path.join(os.path.abspath(os.path.join(__file__ ,"../../")), "search_engine")
 DATASET_DIR = os.path.join(os.path.abspath(os.path.join(__file__ ,"../../..")), "preprocessed")
@@ -95,6 +96,9 @@ class TranslationMemory(object):
     #self.contexts = self.contexts.detach()
     #self.hiddens = self.hiddens.detach()
 
+
+    #translate_to_all_loggers("out_mask fit {}".format(self.output_mask.size()))
+
   def parameters(self):
     #return []
     yield self.M
@@ -133,7 +137,7 @@ class TranslationMemory(object):
 
 
   @log_func
-  def match(self, context):
+  def match(self, context, position):
     '''
     context = Variable(FloatTensor(B, HE * DE))
     '''
@@ -155,8 +159,8 @@ class TranslationMemory(object):
     energies = energies.view(B, self.hps.tm_top_size * T)
 
     energies = torch.nn.Softmax(dim=1)(energies)
-    energies = energies * self.output_mask
-    energies = energies / energies.sum(dim=1, keepdim=True)
+    #energies = energies * self.output_mask
+    #energies = energies / energies.sum(dim=1, keepdim=True)
     self.writer.add_scalar("translation_memory/energies", (energies.max(-1)[0] - 1 / self.output_mask.sum(-1)).mean(), self.i_energies)
     self.i_energies += 1
     hidden = (energies.permute(1,0).contiguous().view(1, self.hps.tm_top_size * T, B, 1)\
@@ -165,6 +169,10 @@ class TranslationMemory(object):
       .sum(dim=1) # [LD * BD, B, HD]
 
     output_exp = (energies.view(B, self.hps.tm_top_size * T, 1) * self.outputs_exp).sum(dim=1) # [B, target_lang_size]
+    #kill me
+
+    #print(self.outputs_exp.size())
+    #output_exp = self.outputs_exp[:, position, :].contiguous() # [B, target_lang_size]
 
     
 
@@ -173,7 +181,7 @@ class TranslationMemory(object):
       assert_shape_equal(output_exp.size(), torch.Size([B, self.outputs_exp.size(-1)]))
 
       #print(output_exp.size())
-      print(output_exp.sum(dim=1))
+      #print(output_exp.sum(dim=1))
 
       #print(self.M)
     return hidden , output_exp

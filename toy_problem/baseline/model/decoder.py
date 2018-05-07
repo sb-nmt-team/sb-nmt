@@ -8,6 +8,7 @@ from model.attn import Attn
 from data import lang
 from utils.hparams import HParams
 from utils.debug_utils import assert_shape_equal
+from utils.launch_utils import log_func, translate_to_all_loggers
 
 
 class DecoderRNN(nn.Module):
@@ -31,7 +32,7 @@ class DecoderRNN(nn.Module):
 
     self.out = nn.Linear(self.hps.dec_hidden_size * self.num_directions, output_size)
 
-  def forward(self, input, encoder_outputs, mask, hidden=None, translation_memory=None):
+  def forward(self, input, encoder_outputs, mask, hidden=None, translation_memory=None, position=None):
     """
         input: [B,]
         encoder_outputs:  [B, T, DE * HE]
@@ -55,7 +56,7 @@ class DecoderRNN(nn.Module):
       assert_shape_equal(context.shape, torch.Size([batch_size, self.hps.enc_hidden_size *  (int(self.hps.enc_bidirectional) + 1)]))
     assert context.shape[0] == batch_size, len(context.shape) == 2
     if translation_memory is not None: # calculate scores q
-      hidden_state_from_memory, output_exp_from_memory = translation_memory.match(context)
+      hidden_state_from_memory, output_exp_from_memory = translation_memory.match(context, position)
       if __debug__ and first_iter:
         assert((hidden_state_from_memory == hidden).all(), '{}\t{}'.format(hidden.size(), hidden_state_from_memory.size()))
       # print(context.size(), hidden_state_from_memory.size())
