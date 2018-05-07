@@ -143,24 +143,25 @@ class TranslationMemory(object):
     '''
     B = context.size(0)
     T = self.contexts.size(1)
-    value = 0
-    c = context.data.cpu().numpy()
-    sc = self.contexts.data.cpu().numpy()
-    for i in range(len(context)):
-      flag = any([np.allclose(x, c[i]) for x in sc[i]])
-      if not flag:
-        print(c[i][:10])
-        print(sc[i][:, :10])
-      value = max(value, np.abs(sc[i] - c[i]).sum(-1).min())
-    self.writer.add_scalar("translation_memory/context_diff_value", value, self.i_energies)  
+    # value = 0
+    # c = context.data.cpu().numpy()
+    # sc = self.contexts.data.cpu().numpy()
+    # for i in range(len(context)):
+    #   flag = any([np.allclose(x, c[i]) for x in sc[i]])
+    #   if not flag:
+    #     print(c[i][:10])
+    #     print(sc[i][:, :10])
+    #   value = max(value, np.abs(sc[i] - c[i]).sum(-1).min())
+    # self.writer.add_scalar("translation_memory/context_diff_value", value, self.i_energies)  
     #context = context.matmul(self.M) # [B, HE * DE]
     energies = self.contexts.view(B, self.hps.tm_top_size, T, self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1))\
             .matmul(context.view(-1, 1, self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1), 1)) # [B, self.T]
     energies = energies.view(B, self.hps.tm_top_size * T)
 
+    energies = energies * self.output_mask
     energies = torch.nn.Softmax(dim=1)(energies)
-    #energies = energies * self.output_mask
-    #energies = energies / energies.sum(dim=1, keepdim=True)
+    energies = energies * self.output_mask
+    energies = energies / energies.sum(dim=1, keepdim=True)
     self.writer.add_scalar("translation_memory/energies", (energies.max(-1)[0] - 1 / self.output_mask.sum(-1)).mean(), self.i_energies)
     self.i_energies += 1
     hidden = (energies.permute(1,0).contiguous().view(1, self.hps.tm_top_size * T, B, 1)\
