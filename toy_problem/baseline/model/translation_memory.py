@@ -59,16 +59,21 @@ class TranslationMemory(object):
       search_inputs += found_inputs
       search_outputs += found_outputs
 
+
     search_inputs, input_mask = self.source_lang.convert_batch(search_inputs)
+
     search_inputs = Variable(torch.from_numpy(search_inputs.astype(np.int64))).contiguous()
     input_mask = Variable(torch.from_numpy(input_mask.astype(np.float32))).contiguous()
+    if self.is_cuda:
+        search_inputs = search_inputs.cuda()
+        input_mask = input_mask.cuda()
     search_outputs, output_mask = self.target_lang.convert_batch(search_outputs)
     search_outputs = Variable(torch.from_numpy(search_outputs.astype(np.int64))).contiguous()
     # print(search_inputs, search_outputs)
     output_mask = Variable(torch.from_numpy(output_mask.astype(np.float32))).contiguous()
     if self.is_cuda:
-        search_inputs = search_inputs.cuda()
-        input_mask = input_mask.cuda()
+        #search_inputs = search_inputs.cuda()
+        #input_mask = input_mask.cuda()
         search_outputs = search_outputs.cuda()
         output_mask = output_mask.cuda() #
     # print(search_outputs.size())

@@ -117,11 +117,16 @@ class Seq2Seq(nn.Module):
     contexts = Variable(torch.zeros((B, out_mask.size()[1] - 1,\
                                  (self.hps.enc_bidirectional + 1) *\
                                  self.hps.enc_hidden_size)))
+
+    if self.training_hps.use_cuda:
+        hiddens = hiddens.cuda()
+        contexts = contexts.cuda()
     
     for i in range(out_mask.size()[1] - 1):
       output, hidden, context = self.decoder(output_batch[:, i], encoder_outputs, mask=mask, hidden=hidden)
       hiddens[:, i, :, :] = hidden
       contexts[:, i, :] = context
+
 
     return hiddens, contexts
 
