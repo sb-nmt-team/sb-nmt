@@ -82,8 +82,8 @@ class DecoderRNN(nn.Module):
     output = self.out(output).view(batch_size, self.output_size)
     output = F.log_softmax(output, -1)
     if translation_memory is not None and self.hps.dec_use_shallow_fusion:
-      output = (retrieval_gate * output.clamp(-10, 10).exp() + (1 - retrieval_gate) * output_exp_from_memory.clamp(0.001, 0.999)).log()
-      output = output_exp_from_memory.clamp(1E-12, 1 - 1E-12).log()
+      output = (retrieval_gate * output.clamp(-10, 10).exp() + (1 - retrieval_gate) * output_exp_from_memory.clamp(1E-12, 1 - 1E-12)).log()
+      #output = output_exp_from_memory.clamp(1E-12, 1 - 1E-12).log()
     self.i += 1
     
     #DELETE ME

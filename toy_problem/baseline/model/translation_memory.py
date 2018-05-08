@@ -89,7 +89,8 @@ class TranslationMemory(object):
     self.writer.add_scalar('translation_memory/contexts_distance',
                            (self.contexts.max(1)[0] - self.contexts.min(1)[0]).sum(-1).mean(), self.i)
     self.i += 1
-    self.output_mask = output_mask[:, 1:]
+    self.output_mask = output_mask[:, 1:].contiguous()
+    self.output_mask = self.output_mask.view(batch_size, self.top_size * (max_output_length - 1))
     if self.is_cuda:
         self.contexts = self.contexts.cuda()
         self.hiddens = self.hiddens.cuda()
@@ -157,7 +158,6 @@ class TranslationMemory(object):
     energies = self.contexts.view(B, self.hps.tm_top_size, T, self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1))\
             .matmul(context.view(-1, 1, self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1), 1)) # [B, self.T]
     energies = energies.view(B, self.hps.tm_top_size * T)
-
     energies = energies * self.output_mask
     energies = torch.nn.Softmax(dim=1)(energies)
     energies = energies * self.output_mask
