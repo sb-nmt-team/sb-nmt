@@ -51,6 +51,8 @@ class Trainer:
     for i in range(30):
         translate_to_all_loggers("{} -> {} ({})".format(test_data[i], translation[i], real_translation[i]))
     
+
+    translate_to_all_loggers("Validated on {}, {}".format(len(real_translation), len(translation)))
     result = {
       "bleu": bleu_from_lines(real_translation, translation),
       "vowel-bleu": vowel_bleu_from_lines(real_translation, translation)
@@ -65,6 +67,8 @@ class Trainer:
     translate_to_all_loggers("On train got sentences (src -> translated (correct)):" )
     for i in range(30):
         translate_to_all_loggers("{} -> {} ({})".format(test_data[i], translation[i], real_translation[i]))
+
+    translate_to_all_loggers("Validated on {}, {}".format(len(real_translation), len(translation)))
 
     result["bleu-train"] = bleu_from_lines(real_translation, translation)
     result["vowel-bleu-train"] = vowel_bleu_from_lines(real_translation, translation)
