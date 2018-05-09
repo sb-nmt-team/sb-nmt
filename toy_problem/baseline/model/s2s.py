@@ -63,6 +63,8 @@ class Seq2Seq(nn.Module):
           translations[j].append(output_idx[j].data[0])
         else:
           converged[j] = True
+        if output_idx[j].data[0] == self.target_lang.get_eos():
+          converged[j] = True
       dec_input = Variable(torch.LongTensor([tr[-1] for tr in translations]))
 
       if self.training_hps.use_cuda:

@@ -39,9 +39,9 @@ class TranslationMemory(object):
     #M_inits = torch.randn(size, size) * 0.01 + torch.eye(size)
     M_inits = torch.eye(size)
     self.M = Variable(M_inits, requires_grad=True)
-    self.retrieval_gate = nn.Linear(self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1) + \
+    self.retrieval_gate = nn.Sequential(nn.Linear(self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1) + \
                                  self.hps.dec_layers * self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1) +\
-                                 self.hps.dec_layers * self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1), 1)
+                                 self.hps.dec_layers * self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1), 128), nn.Tanh(), nn.Linear(128, 1))
 
   @log_func
   def fit(self, input_sentences):
@@ -167,6 +167,7 @@ class TranslationMemory(object):
     energies = torch.nn.Softmax(dim=1)(energies)
     energies = energies * self.output_mask
     energies = energies / energies.sum(dim=1, keepdim=True)
+#     self.writer.add_scalars(energies=energies)
     self.writer.add_scalar("translation_memory/energies", (energies.max(-1)[0] - 1 / self.output_mask.sum(-1)).mean(), self.i_energies)
     self.i_energies += 1
     hidden = (energies.permute(1,0).contiguous().view(1, self.hps.tm_top_size * T, B, 1)\
@@ -176,7 +177,7 @@ class TranslationMemory(object):
 
     output_exp = (energies.view(B, self.hps.tm_top_size * T, 1) * self.outputs_exp).sum(dim=1) # [B, target_lang_size]
     #kill me
-
+#     self.writer.add_scalars(output_exp=output_exp)
     #print(self.outputs_exp.size())
     #output_exp = self.outputs_exp[:, position, :].contiguous() # [B, target_lang_size]
 
