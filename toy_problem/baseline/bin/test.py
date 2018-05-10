@@ -14,6 +14,14 @@ from utils.trainer import Trainer
 from data.lang import read_problem
 from search_engine import SearchEngine, OverfittedSearchEngine
 
+class WriterMock(object):
+  def __init__(self):
+    pass
+  
+  def add_scalar(self, *args, **kwargs):
+    pass
+
+
 # add more tests
 def main():
   sys.stderr.write(sys.executable + "\n")
@@ -56,7 +64,8 @@ def main():
     
   #src = Lang(args.src_path)
   #tgt = Lang(args.tgt_path)
-  model = s2s.Seq2Seq(src, tgt, hps, training_params, searchengine=searchengine)
+  writer = WriterMock()
+  model = s2s.Seq2Seq(src, tgt, hps, training_params, writer=writer, searchengine=searchengine)
   if training_params.use_cuda:
       model = model.cuda()
 
