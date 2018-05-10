@@ -10,6 +10,7 @@ from utils.launch_utils import log_func
 from utils.debug_utils import assert_shape_equal
 from data.lang import read_problem
 from utils.launch_utils import log_func, translate_to_all_loggers
+import sys
 
 SE_DIR = os.path.join(os.path.abspath(os.path.join(__file__ ,"../../")), "search_engine")
 DATASET_DIR = os.path.join(os.path.abspath(os.path.join(__file__ ,"../../..")), "preprocessed")
@@ -42,6 +43,8 @@ class TranslationMemory(object):
     self.retrieval_gate = nn.Sequential(nn.Linear(self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1) + \
                                  self.hps.dec_layers * self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1) +\
                                  self.hps.dec_layers * self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1), 128), nn.Tanh(), nn.Linear(128, 1))
+
+    #print(self.retrieval_gate[0].weight)
 
   @log_func
   def fit(self, input_sentences):
@@ -136,10 +139,12 @@ class TranslationMemory(object):
 
   @log_func
   def load_state_dict(self, state_dict, strict=True):
+    #sys.stderr.write("Loading state dict for transation memory")
     name = list(self.state_dict().keys())[0]
 
     M = state_dict[name]
     self.M = Variable(M, requires_grad=False) 
+    #print(self.retrieval_gate[0].weight)
 
 
   @log_func

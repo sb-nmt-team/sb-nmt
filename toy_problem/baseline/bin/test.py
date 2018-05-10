@@ -64,6 +64,7 @@ def main():
     
   #src = Lang(args.src_path)
   #tgt = Lang(args.tgt_path)
+  training_params = training_params.parse_dict({'batch_size':32})
   writer = WriterMock()
   model = s2s.Seq2Seq(src, tgt, hps, training_params, writer=writer, searchengine=searchengine)
   if training_params.use_cuda:
