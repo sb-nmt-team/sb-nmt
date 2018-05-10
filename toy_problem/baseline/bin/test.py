@@ -56,7 +56,7 @@ def main():
     
   #src = Lang(args.src_path)
   #tgt = Lang(args.tgt_path)
-  model = s2s.Seq2Seq(src, tgt, hps, training_params, searchengine)
+  model = s2s.Seq2Seq(src, tgt, hps, training_params, searchengine=searchengine)
   if training_params.use_cuda:
       model = model.cuda()
 
