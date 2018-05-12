@@ -143,7 +143,7 @@ class TranslationMemory(object):
     name = list(self.state_dict().keys())[0]
 
     M = state_dict[name]
-    self.M = Variable(M, requires_grad=False) 
+    self.M = Variable(M, requires_grad=self.M.requires_grad) 
     #print(self.retrieval_gate[0].weight)
 
 
@@ -164,7 +164,7 @@ class TranslationMemory(object):
     #     print(sc[i][:, :10])
     #   value = max(value, np.abs(sc[i] - c[i]).sum(-1).min())
     # self.writer.add_scalar("translation_memory/context_diff_value", value, self.i_energies)  
-    #context = context.matmul(self.M) # [B, HE * DE]
+    context = context.matmul(self.M) # [B, HE * DE]
     energies = self.contexts.view(B, self.hps.tm_top_size, T, self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1))\
             .matmul(context.view(-1, 1, self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1), 1)) # [B, self.T]
     energies = energies.view(B, self.hps.tm_top_size * T)
