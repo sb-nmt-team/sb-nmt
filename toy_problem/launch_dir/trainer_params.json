@@ -1,2 +1,2 @@
-{"use_tm_on_test":true, "use_cuda":true, "cuda_visible_devices":"4", "batch_size":128, "prefix":"frac_4_256_256",  "model_name":"not_learning_M_overfit", "n_epochs":0, "n_tm_epochs":10,
+{"use_tm_on_test":true, "use_cuda":true, "cuda_visible_devices":"3", "batch_size":128, "prefix":"debug_load",  "model_name":"debug_load", "n_epochs":0, "n_tm_epochs":10,
 "max_length":100, "force_override": true}

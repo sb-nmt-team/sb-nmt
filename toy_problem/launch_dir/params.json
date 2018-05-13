@@ -1,4 +1,4 @@
-{"dataset": "he-en", "fraction": 4, "tm_init": true,  "tm_top_size": 3, "tm_overfitted": true,
+{"dataset": "he-en", "fraction": 16, "tm_init": true,  "tm_top_size": 3, "tm_overfitted": true,
 "enc_bidirectional":true,
 "dec_bidirectional":true,
 "dec_hidden_size":128,

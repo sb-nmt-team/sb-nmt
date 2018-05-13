@@ -40,6 +40,8 @@ class TranslationMemory(object):
     #M_inits = torch.randn(size, size) * 0.01 + torch.eye(size)
     M_inits = torch.eye(size)
     self.M = Variable(M_inits, requires_grad=True)
+    # ADD M TO PARAMETERS
+    #self.M = Variable(M_inits, requires_grad=False)
     self.retrieval_gate = nn.Sequential(nn.Linear(self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1) + \
                                  self.hps.dec_layers * self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1) +\
                                  self.hps.dec_layers * self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1), 128), nn.Tanh(), nn.Linear(128, 1))
@@ -128,23 +130,36 @@ class TranslationMemory(object):
     
 
 
-    name = prefix + "translation_memory." + "M"
     
     if destination is None:
         destination = {}
     
+    name = "translation_memory." + "M"
     destination[name] = M
+
+    name = "translation_memory." + "rg"
+    rg = self.retrieval_gate.state_dict(destination=destination, prefix=name, keep_vars=keep_vars)
+
 
     return destination
 
   @log_func
   def load_state_dict(self, state_dict, strict=True):
     #sys.stderr.write("Loading state dict for transation memory")
-    name = list(self.state_dict().keys())[0]
+    #name = list(self.state_dict().keys())[0]
 
+    name = "translation_memory." + "M"
     M = state_dict[name]
     self.M = Variable(M, requires_grad=self.M.requires_grad) 
-    #print(self.retrieval_gate[0].weight)
+    name = "translation_memory." + "rg"
+    rg = {}
+    for key, item in state_dict.items():
+        if name in key:
+          rg[key] = item
+    #print(rg)
+    rg = dict(**rg)
+    #self.retrieval_gate.load_state_dict(rg, strict=strict)
+    ##print(self.retrieval_gate[0].weight)
 
 
   @log_func
@@ -164,7 +179,7 @@ class TranslationMemory(object):
     #     print(sc[i][:, :10])
     #   value = max(value, np.abs(sc[i] - c[i]).sum(-1).min())
     # self.writer.add_scalar("translation_memory/context_diff_value", value, self.i_energies)  
-    #context = context.matmul(self.M) # [B, HE * DE]
+    context = context.matmul(self.M) # [B, HE * DE]
     energies = self.contexts.view(B, self.hps.tm_top_size, T, self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1))\
             .matmul(context.view(-1, 1, self.hps.enc_hidden_size * (int(self.hps.enc_bidirectional) + 1), 1)) # [B, self.T]
     energies = energies.view(B, self.hps.tm_top_size * T)
