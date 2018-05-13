@@ -235,5 +235,6 @@ class TranslationMemory(object):
       tm_overfitted = False,
       tm_bin_path = os.path.join(SE_DIR, "se.bin"),
       tm_top_size = 3,
-      tm_train_dataset_path = os.path.join(DATASET_DIR, "he-en")
+      tm_train_dataset_path = os.path.join(DATASET_DIR, "he-en"),
+      tm_50_50 = True
     )

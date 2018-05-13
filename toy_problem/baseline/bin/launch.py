@@ -99,6 +99,8 @@ def main():
       searchengine = SearchEngine()
     searchengine.load(hps.tm_bin_path)
     searchengine.set_dictionary(full_dataset)
+    if hps.tm_50_50:
+      searchengine.remove_train_set(dataset["train"][0])
 
   writer = SummaryWriter(log_dir=training_params.logdir)
 

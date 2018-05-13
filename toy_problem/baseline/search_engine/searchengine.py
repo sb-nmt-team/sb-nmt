@@ -1,7 +1,7 @@
 import pickle
 import sys
 from .utils import find_closest
-from utils.launch_utils import log_func
+from utils.launch_utils import log_func, translate_to_all_loggers
 
 class SearchEngine(object):
   @log_func
@@ -24,6 +24,16 @@ class SearchEngine(object):
         some_key = next(self.nn_map.__iter__())
         self.n_neighbours = min(self.n_neighbours,
                                 len(self.nn_map[some_key]))
+
+  @log_func
+  def remove_train_set(self, train_set_src):
+    forbiden_set = set([self.sentence_to_tuple(x) for x in train_set_src])
+    min_len = 10 ** 18
+    for sent in self.nn_map:
+      new_nn = list(filter(lambda x: self.dataset[x[1]] not in forbiden_set, self.nn_map[sent]))
+      self.nn_map[sent] = new_nn
+      min_len = min(min_len, len(new_nn))
+    translate_to_all_loggers("Minimal TM length: {}".format(min_len))
 
   def not_found_warning(self, sentence):
     pass
