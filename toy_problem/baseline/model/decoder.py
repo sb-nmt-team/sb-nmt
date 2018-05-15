@@ -66,6 +66,8 @@ class DecoderRNN(nn.Module):
                                         context.contiguous().view(batch_size, -1)), 1)
       retrieval_gate = torch.sigmoid(translation_memory.retrieval_gate(retrieval_gate_input))
 
+      translation_memory.retrieval_gate_logs.append(retrieval_gate.data.cpu().numpy().reshape(-1, 1))
+
     
       is_testing = "testing" if not self.train else "training"
       #print(is_testing)

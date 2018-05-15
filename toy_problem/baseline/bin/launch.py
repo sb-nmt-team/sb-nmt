@@ -8,6 +8,7 @@ import sys
 import logging
 import logging.config
 
+from shutil import copy2
 
 sys.path.append('..')
 from model import s2s
@@ -51,7 +52,10 @@ def main():
   logger_config['handlers']['stdout']['filename'] = os.path.join(new_folder, 'stdout_logs')
   logging.config.dictConfig(logger_config)
 
+  copy2(args.training_params, new_folder)
+  copy2(args.params, new_folder)
 
+    
   logger.info("Using python binary at {}".format(sys.executable))
 
   os.environ['CUDA_VISIBLE_DEVICES'] = str(training_params.cuda_visible_devices)

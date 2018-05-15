@@ -72,6 +72,9 @@ class Seq2Seq(nn.Module):
 
       if np.all(converged):
         break
+
+    if use_search:
+        self.translation_memory.dump_logs([tuple(map(self.target_lang.get_word, elem)) for elem in translations], None)
     return [' '.join(map(self.target_lang.get_word, elem)) for elem in translations]
 
   @log_func

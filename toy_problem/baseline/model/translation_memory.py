@@ -50,6 +50,10 @@ class TranslationMemory(object):
 
   @log_func
   def fit(self, input_sentences):
+
+    neighbour_logs = []
+    self.retrieval_gate_logs = []
+
     batch_size = len(input_sentences)
     search_inputs, search_outputs = [], []
     input_sentences = input_sentences.clone()
@@ -58,6 +62,7 @@ class TranslationMemory(object):
       found = self.searchengine(sentence, n_neighbours=self.top_size, translation=True)
       found_inputs = [x[1] for x in found]
       found_outputs = [x[2] for x in found]
+      neighbour_logs.append(found)
       # getter = lambda s: self.database.get(s, "n o t f o u n d")
       # found_outputs = list(map(getter, found_inputs))
       assert(len(found_outputs) == self.top_size)
@@ -65,6 +70,8 @@ class TranslationMemory(object):
       search_outputs += found_outputs
 
 
+    self.neighbour_logs = neighbour_logs
+    
     search_inputs, input_mask = self.source_lang.convert_batch(search_inputs)
 
     search_inputs = Variable(torch.from_numpy(search_inputs.astype(np.int64))).contiguous()
@@ -227,6 +234,12 @@ class TranslationMemory(object):
     self.M = self.M.cpu()
     self.retrieval_gate  = self.retrieval_gate.cpu()
     return self
+ 
+  def dump_logs(self, translations, path):
+    self.retrieval_gate_logs = np.hstack(self.retrieval_gate_logs)
+    print(self.retrieval_gate_logs)
+    print(self.neighbour_logs)
+    print(translations)
 
   @staticmethod
   def get_default_hparams():
