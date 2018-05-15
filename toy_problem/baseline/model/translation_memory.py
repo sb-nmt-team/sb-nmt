@@ -166,7 +166,7 @@ class TranslationMemory(object):
     rg = {}
     for key, item in state_dict.items():
         if name in key:
-          rg[key] = item
+          rg[key[len(name):]] = item
     #print(rg)
     rg = dict(**rg)
     self.retrieval_gate.load_state_dict(rg, strict=strict)
