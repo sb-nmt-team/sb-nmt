@@ -11,6 +11,7 @@ from utils.debug_utils import assert_shape_equal
 from data.lang import read_problem
 from utils.launch_utils import log_func, translate_to_all_loggers
 import sys
+import pickle
 
 SE_DIR = os.path.join(os.path.abspath(os.path.join(__file__ ,"../../")), "search_engine")
 DATASET_DIR = os.path.join(os.path.abspath(os.path.join(__file__ ,"../../..")), "preprocessed")
@@ -19,6 +20,8 @@ DATASET_DIR = os.path.join(os.path.abspath(os.path.join(__file__ ,"../../..")), 
 class TranslationMemory(object):
   @log_func
   def __init__(self, model, hps, writer=None, searchengine=None):
+    
+    self.translation_logs = []
     self.is_cuda = False
     self.model = model
     self.writer = writer
@@ -46,6 +49,7 @@ class TranslationMemory(object):
                                  self.hps.dec_layers * self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1) +\
                                  self.hps.dec_layers * self.hps.dec_hidden_size * (int(self.hps.dec_bidirectional) + 1), 128), nn.Tanh(), nn.Linear(128, 1))
 
+    self.train()
     #print(self.retrieval_gate[0].weight)
 
   @log_func
@@ -234,12 +238,45 @@ class TranslationMemory(object):
     self.M = self.M.cpu()
     self.retrieval_gate  = self.retrieval_gate.cpu()
     return self
+
+  @log_func
+  def eval(self):
+    self.train(False)
+    self.translation_logs = []
+    with open("./translation_logs.pkl", "w"):
+        pass
+         
+    return self
+
+  @log_func
+  def train(self, mode=True):
+    self.training = mode
+    self.retrieval_gate.train(mode)
+    return self
  
   def dump_logs(self, translations, path):
-    self.retrieval_gate_logs = np.hstack(self.retrieval_gate_logs)
-    print(self.retrieval_gate_logs)
-    print(self.neighbour_logs)
-    print(translations)
+    #self.retrieval_gate_logs = np.hstack(self.retrieval_gate_logs)
+    #print(self.retrieval_gate_logs)
+    #print(self.neighbour_logs)
+    #print(translations)
+    
+    #del self.retrieval_gate_logs
+    #del self.neighbour_logs 
+    
+    rg_log = np.hstack(self.retrieval_gate_logs)
+    assert len(translations) == rg_log.shape[0]
+    assert len(translations) == len(self.neighbour_logs)
+
+    
+    with open("./translation_logs.pkl",  "ab") as f:
+        for t, n, rg in zip(translations, rg_log, self.neighbour_logs):
+            pickle.dump((t, n, rg), f)
+
+
+        
+        
+
+
 
   @staticmethod
   def get_default_hparams():

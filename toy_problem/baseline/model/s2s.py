@@ -34,6 +34,18 @@ class Seq2Seq(nn.Module):
       self.translationmemory = None
 
   @log_func
+  def eval(self):
+    return self.train(False)
+
+  @log_func
+  def train(self, mode=True):
+    super(self.__class__, self).train(mode)
+    if self.translationmemory is not None:
+        self.translationmemory.train(mode)
+
+    return self
+
+  @log_func
   def translate(self, input_batch, mask, use_search=False):
     batch_size = input_batch.size()[0]
     encoder_outputs = self.encoder(input_batch)
@@ -74,7 +86,7 @@ class Seq2Seq(nn.Module):
         break
 
     if use_search:
-        self.translation_memory.dump_logs([tuple(map(self.target_lang.get_word, elem)) for elem in translations], None)
+        self.translationmemory.dump_logs([tuple(map(self.target_lang.get_word, elem)) for elem in translations], "../dumped_translation_logs.pkl")
     return [' '.join(map(self.target_lang.get_word, elem)) for elem in translations]
 
   @log_func
@@ -160,6 +172,13 @@ class Seq2Seq(nn.Module):
     self.encoder = self.encoder.cpu()
     self.decoder = self.decoder.cpu()
     return super(Seq2Seq, self).cpu()
+
+
+  #def eval(self):
+  #  self.train = False
+
+  #def eval(self):
+  #  self.train = True
 
   @staticmethod
   def get_default_hparams():
