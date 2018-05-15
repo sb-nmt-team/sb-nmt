@@ -73,7 +73,8 @@ def main():
   sys.stderr.write("Loading the model state\n")
   state_dict = torch.load(args.model_state)
   model.load_state_dict(state_dict)
-
+  
+  model.eval()
   sys.stderr.write("Ready!\n")
   sents = []
   for sent in sys.stdin:
