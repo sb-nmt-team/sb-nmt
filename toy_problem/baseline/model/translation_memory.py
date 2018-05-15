@@ -158,7 +158,7 @@ class TranslationMemory(object):
           rg[key] = item
     #print(rg)
     rg = dict(**rg)
-    #self.retrieval_gate.load_state_dict(rg, strict=strict)
+    self.retrieval_gate.load_state_dict(rg, strict=strict)
     ##print(self.retrieval_gate[0].weight)
 
 
