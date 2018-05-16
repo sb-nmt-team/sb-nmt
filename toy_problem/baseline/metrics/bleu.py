@@ -134,6 +134,7 @@ def vowel_bleu_from_lines(truth_lines, trans_lines, max_order=4, smooth=False):
   return bleu_from_lines(list(map(extract_vowels, truth_lines)), list(map(extract_vowels, trans_lines)), max_order, smooth)
 
 
+
 def main():
   with open(sys.argv[1]) as truth_file, open(sys.argv[2]) as trans_file:
     reference_corpus = read_corpus(truth_file, True)
