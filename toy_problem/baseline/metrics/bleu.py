@@ -119,10 +119,10 @@ def read_corpus(file, source=False):
   return read_corpus_from_lines(file.readlines(), source)
 
 
-def bleu_from_lines(truth_lines, trans_lines):
+def bleu_from_lines(truth_lines, trans_lines, max_order=4, smooth=False):
   reference_corpus = read_corpus_from_lines(truth_lines, True)
   translation_corpus = read_corpus_from_lines(trans_lines)
-  return compute_bleu(reference_corpus, translation_corpus)[0]
+  return compute_bleu(reference_corpus, translation_corpus, max_order, smooth)[0]
 
 
 def extract_vowels(line):
@@ -130,8 +130,8 @@ def extract_vowels(line):
   return ' '.join(filter(lambda x: x.lower() in VOWELS, line))
 
 
-def vowel_bleu_from_lines(truth_lines, trans_lines):
-  return bleu_from_lines(list(map(extract_vowels, truth_lines)), list(map(extract_vowels, trans_lines)))
+def vowel_bleu_from_lines(truth_lines, trans_lines, max_order=4, smooth=False):
+  return bleu_from_lines(list(map(extract_vowels, truth_lines)), list(map(extract_vowels, trans_lines)), max_order, smooth)
 
 
 def main():
