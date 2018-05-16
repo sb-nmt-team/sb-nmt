@@ -166,7 +166,7 @@ class TranslationMemory(object):
     rg = {}
     for key, item in state_dict.items():
         if name in key:
-          rg[key] = item
+          rg[key[len(name):]] = item
     #print(rg)
     rg = dict(**rg)
     self.retrieval_gate.load_state_dict(rg, strict=strict)
@@ -242,9 +242,6 @@ class TranslationMemory(object):
   @log_func
   def eval(self):
     self.train(False)
-    self.translation_logs = []
-    with open("./translation_logs.pkl", "w"):
-        pass
          
     return self
 
@@ -252,6 +249,9 @@ class TranslationMemory(object):
   def train(self, mode=True):
     self.training = mode
     self.retrieval_gate.train(mode)
+    self.translation_logs = []
+    with open("./translation_logs.pkl", "w"):
+        pass
     return self
  
   def dump_logs(self, translations, path):
