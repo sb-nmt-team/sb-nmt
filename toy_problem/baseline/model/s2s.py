@@ -155,7 +155,8 @@ class Seq2Seq(nn.Module):
     return destination
 
   def load_state_dict(self, state_dict, strict=True):
-    self.translationmemory.load_state_dict(state_dict)
+    if self.translationmemory is not None:
+        self.translationmemory.load_state_dict(state_dict)
     #print(state_dict)
     #del state_dict['translation_memory.M']
     super(Seq2Seq, self).load_state_dict(state_dict, strict)

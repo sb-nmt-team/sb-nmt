@@ -25,7 +25,7 @@ class WriterMock(object):
 # add more tests
 def main():
   sys.stderr.write(sys.executable + "\n")
-  os.environ['CUDA_VISIBLE_DEVICES'] = "1"
+  os.environ['CUDA_VISIBLE_DEVICES'] = "6"
   if torch.cuda.is_available():
     sys.stderr.write("Running on device {}\n".format(torch.cuda.current_device()))
   parser = argparse.ArgumentParser()
